@@ -32,7 +32,11 @@ from typing import Any
 import anyio
 from googleapiclient.http import MediaInMemoryUpload
 
-from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError
+from llm_wiki_mcp.errors import (
+    WikiConflictError,
+    WikiNotFoundError,
+    WikiPermissionError,
+)
 from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import validate_slug
 from llm_wiki_mcp.storage import PageRead
@@ -240,6 +244,15 @@ class GoogleDriveStorage:
             media_body=media,
             fields="id",
         ).execute()
+
+    # ───── Raw layer (read-only) ───────────────────────────────────
+
+    async def write_raw_file(self, name: str, data: bytes) -> None:
+        """Always raises. raw/ is immutable per Karpathy."""
+        raise WikiPermissionError(
+            "writes to raw/ are not allowed; raw sources are immutable",
+            target=f"raw/{name}",
+        )
 
 
 def _parse_drive_time(s: str) -> datetime:

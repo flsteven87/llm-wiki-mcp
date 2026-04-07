@@ -7,7 +7,12 @@ from datetime import date, datetime
 
 import pytest
 
-from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError, WikiPathError
+from llm_wiki_mcp.errors import (
+    WikiConflictError,
+    WikiNotFoundError,
+    WikiPathError,
+    WikiPermissionError,
+)
 from llm_wiki_mcp.log_format import LogEntry
 from llm_wiki_mcp.storage.gdrive import GoogleDriveStorage
 from tests._fakes.drive import FakeDrive
@@ -169,6 +174,13 @@ async def test_append_log_appends_to_existing_file():
     await storage.append_log(e2)
     text = await storage.read_log()
     assert text.index("ingest | A") < text.index("lint | B")
+
+
+async def test_write_raw_file_always_raises():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    with pytest.raises(WikiPermissionError):
+        await storage.write_raw_file("source.pdf", b"...")
 
 
 async def test_concurrent_appends_serialized_by_lock():
