@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from llm_wiki_mcp.errors import WikiNotFoundError, WikiPathError
+from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError, WikiPathError
 from llm_wiki_mcp.storage.gdrive import GoogleDriveStorage
 from tests._fakes.drive import FakeDrive
 
@@ -97,3 +97,47 @@ async def test_list_pages_ignores_non_md_files():
     drive._seed_file(name="notes.txt", parents=[storage._pages_folder_id], content=b"")
 
     assert await storage.list_pages() == ["page"]
+
+
+async def test_write_page_creates_new_file_when_no_etag_and_missing():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    new_etag = await storage.write_page("hello", "# Hello\n")
+    page = await storage.read_page("hello")
+    assert page.body == "# Hello\n"
+    assert page.etag == new_etag
+
+
+async def test_write_page_no_etag_existing_file_raises_conflict():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    await storage.write_page("hello", "# Hello\n")
+    with pytest.raises(WikiConflictError):
+        await storage.write_page("hello", "# Goodbye\n")
+
+
+async def test_write_page_with_correct_etag_updates():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    e1 = await storage.write_page("pg", "v1")
+    e2 = await storage.write_page("pg", "v2", expected_etag=e1)
+    assert e1 != e2
+    page = await storage.read_page("pg")
+    assert page.body == "v2"
+    assert page.etag == e2
+
+
+async def test_write_page_with_stale_etag_raises():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    e1 = await storage.write_page("pg", "v1")
+    await storage.write_page("pg", "v2", expected_etag=e1)
+    with pytest.raises(WikiConflictError):
+        await storage.write_page("pg", "v3", expected_etag=e1)
+
+
+async def test_write_page_etag_for_missing_file_raises():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    with pytest.raises(WikiConflictError):
+        await storage.write_page("nope", "x", expected_etag="rev1")

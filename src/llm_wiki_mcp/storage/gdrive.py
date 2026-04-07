@@ -30,8 +30,9 @@ from datetime import datetime
 from typing import Any
 
 import anyio
+from googleapiclient.http import MediaInMemoryUpload
 
-from llm_wiki_mcp.errors import WikiNotFoundError
+from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError
 from llm_wiki_mcp.slug import validate_slug
 from llm_wiki_mcp.storage import PageRead
 
@@ -123,6 +124,75 @@ class GoogleDriveStorage:
         q = f"'{self._pages_folder_id}' in parents and trashed=false"
         result = self._service.files().list(q=q, fields="files(name)", pageSize=100).execute()
         return [f["name"] for f in result.get("files", [])]
+
+    async def write_page(
+        self,
+        slug: str,
+        body: str,
+        expected_etag: str | None = None,
+    ) -> str:
+        """Drive-side CAS via headRevisionId compare-and-swap.
+
+        Etag semantics mirror Local exactly:
+          - expected_etag is None and file missing → create
+          - expected_etag is None and file exists  → WikiConflictError (anti-clobber)
+          - expected_etag matches headRevisionId   → update
+          - expected_etag set but file missing OR mismatch → WikiConflictError
+
+        Note: same TOCTOU window as Local (read-then-write); acceptable for
+        single-process MCP. Drive has no native If-Match header on update.
+        """
+        validate_slug(slug)
+        body_bytes = body.encode("utf-8")
+        return await anyio.to_thread.run_sync(
+            self._write_page_sync, slug, body_bytes, expected_etag
+        )
+
+    def _write_page_sync(
+        self,
+        slug: str,
+        body_bytes: bytes,
+        expected_etag: str | None,
+    ) -> str:
+        meta = self._find_page_metadata_sync(slug)
+        media = MediaInMemoryUpload(body_bytes, mimetype="text/markdown")
+
+        if meta is None:
+            if expected_etag is not None:
+                raise WikiConflictError(
+                    f"page does not exist but caller passed expected_etag for {slug}",
+                    slug=slug,
+                    expected_etag=expected_etag,
+                    actual_etag=None,
+                )
+            created = (
+                self._service.files()
+                .create(
+                    body={"name": f"{slug}.md", "parents": [self._pages_folder_id]},
+                    media_body=media,
+                    fields="id,headRevisionId,modifiedTime",
+                )
+                .execute()
+            )
+            return created["headRevisionId"]
+
+        if expected_etag != meta["headRevisionId"]:
+            raise WikiConflictError(
+                f"etag mismatch for {slug}",
+                slug=slug,
+                expected_etag=expected_etag,
+                actual_etag=meta["headRevisionId"],
+            )
+        updated = (
+            self._service.files()
+            .update(
+                fileId=meta["id"],
+                media_body=media,
+                fields="id,headRevisionId,modifiedTime",
+            )
+            .execute()
+        )
+        return updated["headRevisionId"]
 
 
 def _parse_drive_time(s: str) -> datetime:
