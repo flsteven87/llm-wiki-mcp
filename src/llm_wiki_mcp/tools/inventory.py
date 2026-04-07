@@ -20,6 +20,9 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
+
+import anyio
 
 from llm_wiki_mcp.log_format import parse_log_entries
 from llm_wiki_mcp.models import Inventory, InventoryItem, Mention
@@ -41,7 +44,7 @@ async def wiki_inventory(
     slugs = await storage.list_pages()
 
     # First pass: read every page, extract frontmatter + outgoing links.
-    raw: dict[str, tuple[str, dict, list[str], int, str]] = {}
+    raw: dict[str, tuple[str, dict[str, Any], list[str], int, str]] = {}
     for slug in slugs:
         body_text, etag = await storage.read_page(slug)
         fm, _stripped_body, links_out = parse_page(body_text)
@@ -56,10 +59,13 @@ async def wiki_inventory(
                 inbound[tgt].append(src_slug)
 
     # Build InventoryItems.
+    # NOTE: reaches into storage.wiki_root/page_dir for mtime — this is a
+    # layer leak that should be cleaned up when the Storage Protocol is
+    # extracted in Phase 2 (read_page should return mtime alongside etag).
     page_dir_path = Path(storage.wiki_root) / storage.page_dir
     items: list[InventoryItem] = []
     for slug, (_b, fm, links_out, body_len, etag) in raw.items():
-        stat = (page_dir_path / f"{slug}.md").stat()
+        stat = await anyio.Path(page_dir_path / f"{slug}.md").stat()
         items.append(
             InventoryItem(
                 slug=slug,

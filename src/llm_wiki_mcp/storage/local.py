@@ -128,7 +128,7 @@ class LocalFilesystemStorage:
             tmp.unlink(missing_ok=True)
             raise
 
-        stat = path.stat()
+        stat = await anyio.Path(path).stat()
         return _compute_etag(body_bytes, stat.st_mtime_ns)
 
     # ───── Log operations ──────────────────────────────────────────
