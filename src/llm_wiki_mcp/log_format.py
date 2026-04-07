@@ -17,7 +17,7 @@ import re
 from datetime import date
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from llm_wiki_mcp.errors import WikiSchemaViolationError
 
@@ -34,10 +34,10 @@ class LogEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    timestamp: date
+    timestamp: date = Field(default_factory=date.today)
     operation: str
     title: str
-    extra_lines: list[str] = []
+    extra_lines: list[str] = Field(default_factory=list)
 
     # Characters that would break the single-line header format.
     _BAD_OP_CHARS: ClassVar[str] = "|[] \t\n\r"

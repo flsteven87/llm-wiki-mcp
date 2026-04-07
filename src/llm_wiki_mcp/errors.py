@@ -55,8 +55,8 @@ class WikiConflictError(WikiError):
         message: str,
         *,
         slug: str,
-        expected_etag: str,
-        actual_etag: str,
+        expected_etag: str | None,
+        actual_etag: str | None,
     ) -> None:
         super().__init__(message)
         self.slug = slug

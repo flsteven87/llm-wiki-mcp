@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import anyio
 
@@ -28,6 +27,13 @@ from llm_wiki_mcp.log_format import parse_log_entries
 from llm_wiki_mcp.models import Inventory, InventoryItem, Mention
 from llm_wiki_mcp.parser import parse_page
 from llm_wiki_mcp.storage.local import LocalFilesystemStorage
+
+
+class _RawPage(NamedTuple):
+    body: str
+    frontmatter: dict[str, Any]
+    links_out: list[str]
+    etag: str
 
 
 async def wiki_inventory(
@@ -43,48 +49,40 @@ async def wiki_inventory(
     """
     slugs = await storage.list_pages()
 
-    # First pass: read every page, extract frontmatter + outgoing links.
-    raw: dict[str, tuple[str, dict[str, Any], list[str], int, str]] = {}
+    raw: dict[str, _RawPage] = {}
     for slug in slugs:
         body_text, etag = await storage.read_page(slug)
-        fm, _stripped_body, links_out = parse_page(body_text)
-        body_len = len(body_text)
-        raw[slug] = (body_text, fm, links_out, body_len, etag)
+        fm, _stripped, links_out = parse_page(body_text)
+        raw[slug] = _RawPage(body_text, fm, links_out, etag)
 
-    # Second pass: build reverse-edge index.
     inbound: dict[str, list[str]] = {s: [] for s in slugs}
-    for src_slug, (_b, _fm, links_out, _bl, _e) in raw.items():
-        for tgt in links_out:
+    for src_slug, page in raw.items():
+        for tgt in page.links_out:
             if tgt in inbound:
                 inbound[tgt].append(src_slug)
 
-    # Build InventoryItems.
-    # NOTE: reaches into storage.wiki_root/page_dir for mtime — this is a
-    # layer leak that should be cleaned up when the Storage Protocol is
-    # extracted in Phase 2 (read_page should return mtime alongside etag).
-    page_dir_path = Path(storage.wiki_root) / storage.page_dir
+    # NOTE: reaches into storage.wiki_root/page_dir for mtime — layer leak
+    # to be cleaned up when the Storage Protocol is extracted in Phase 2
+    # (read_page should return mtime alongside etag).
+    page_dir_path = storage.wiki_root / storage.page_dir
     items: list[InventoryItem] = []
-    for slug, (_b, fm, links_out, body_len, etag) in raw.items():
+    for slug, page in raw.items():
         stat = await anyio.Path(page_dir_path / f"{slug}.md").stat()
         items.append(
             InventoryItem(
                 slug=slug,
-                frontmatter=fm,
-                body_length=body_len,
+                frontmatter=page.frontmatter,
+                body_length=len(page.body),
                 mtime=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
-                etag=etag,
-                links_out=links_out,
+                etag=page.etag,
+                links_out=page.links_out,
                 links_in=sorted(set(inbound[slug])),
             )
         )
 
-    # Parse log entries.
-    log_text = await storage.read_log()
-    log_entries = parse_log_entries(log_text)
+    log_entries = parse_log_entries(await storage.read_log())
 
-    # Optional plain-text mention scan.
-    bodies = {slug: tup[0] for slug, tup in raw.items()}
-    mentions = _scan_mentions(bodies, scan_for) if scan_for else []
+    mentions = _scan_mentions({s: p.body for s, p in raw.items()}, scan_for) if scan_for else []
 
     return Inventory(
         pages=sorted(items, key=lambda i: i.slug),

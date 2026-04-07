@@ -77,10 +77,12 @@ class LocalFilesystemStorage:
     async def read_page(self, slug: str) -> tuple[str, str]:
         """Return (body, etag)."""
         path = self._page_path(slug)
-        if not path.exists():
-            raise WikiNotFoundError(f"page not found: {slug}", slug=slug)
-        body_bytes = await anyio.Path(path).read_bytes()
-        stat = await anyio.Path(path).stat()
+        apath = anyio.Path(path)
+        try:
+            body_bytes = await apath.read_bytes()
+        except FileNotFoundError as e:
+            raise WikiNotFoundError(f"page not found: {slug}", slug=slug) from e
+        stat = await apath.stat()
         etag = _compute_etag(body_bytes, stat.st_mtime_ns)
         return body_bytes.decode("utf-8"), etag
 
@@ -93,26 +95,28 @@ class LocalFilesystemStorage:
         """Atomic write with optimistic concurrency. Returns the new etag."""
         path = self._page_path(slug)
         body_bytes = body.encode("utf-8")
+        apath = anyio.Path(path)
 
-        if path.exists():
-            current = await anyio.Path(path).read_bytes()
-            stat = await anyio.Path(path).stat()
+        try:
+            current = await apath.read_bytes()
+        except FileNotFoundError:
+            if expected_etag is not None:
+                raise WikiConflictError(
+                    f"page does not exist but caller passed expected_etag for {slug}",
+                    slug=slug,
+                    expected_etag=expected_etag,
+                    actual_etag=None,
+                ) from None
+        else:
+            stat = await apath.stat()
             current_etag = _compute_etag(current, stat.st_mtime_ns)
-            if expected_etag is None or expected_etag != current_etag:
+            if expected_etag != current_etag:
                 raise WikiConflictError(
                     f"etag mismatch for {slug}",
                     slug=slug,
-                    expected_etag=expected_etag or "",
+                    expected_etag=expected_etag,
                     actual_etag=current_etag,
                 )
-        elif expected_etag is not None:
-            # Caller thinks the page exists; it doesn't.
-            raise WikiConflictError(
-                f"page does not exist but caller passed expected_etag for {slug}",
-                slug=slug,
-                expected_etag=expected_etag,
-                actual_etag="",
-            )
 
         # Atomic write: tmp + fsync + rename.
         tmp = path.with_name(f"{path.name}.tmp.{uuid.uuid4().hex}")
