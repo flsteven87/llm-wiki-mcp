@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+from datetime import date, datetime
 
 import pytest
 
 from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError, WikiPathError
+from llm_wiki_mcp.log_format import LogEntry
 from llm_wiki_mcp.storage.gdrive import GoogleDriveStorage
 from tests._fakes.drive import FakeDrive
 
@@ -141,3 +143,46 @@ async def test_write_page_etag_for_missing_file_raises():
     storage = _make_storage_with_folders(drive)
     with pytest.raises(WikiConflictError):
         await storage.write_page("nope", "x", expected_etag="rev1")
+
+
+async def test_read_log_empty_when_missing():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    assert await storage.read_log() == ""
+
+
+async def test_append_log_creates_file_on_first_call():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    entry = LogEntry(timestamp=date(2026, 4, 7), operation="ingest", title="A")
+    await storage.append_log(entry)
+    text = await storage.read_log()
+    assert "ingest | A" in text
+
+
+async def test_append_log_appends_to_existing_file():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    e1 = LogEntry(timestamp=date(2026, 4, 7), operation="ingest", title="A")
+    e2 = LogEntry(timestamp=date(2026, 4, 8), operation="lint", title="B")
+    await storage.append_log(e1)
+    await storage.append_log(e2)
+    text = await storage.read_log()
+    assert text.index("ingest | A") < text.index("lint | B")
+
+
+async def test_concurrent_appends_serialized_by_lock():
+    """20 concurrent appends → 20 entries visible, no losses.
+
+    The asyncio.Lock guarantees this even though Drive has no native
+    atomic append. Cross-process safety is explicitly out of scope.
+    """
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    entries = [
+        LogEntry(timestamp=date(2026, 4, 7), operation=f"op{i}", title=f"t{i}") for i in range(20)
+    ]
+    await asyncio.gather(*(storage.append_log(e) for e in entries))
+    text = await storage.read_log()
+    for i in range(20):
+        assert f"op{i} | t{i}" in text

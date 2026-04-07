@@ -33,6 +33,7 @@ import anyio
 from googleapiclient.http import MediaInMemoryUpload
 
 from llm_wiki_mcp.errors import WikiConflictError, WikiNotFoundError
+from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import validate_slug
 from llm_wiki_mcp.storage import PageRead
 
@@ -193,6 +194,52 @@ class GoogleDriveStorage:
             .execute()
         )
         return updated["headRevisionId"]
+
+    # ───── Log operations ──────────────────────────────────────────
+
+    async def read_log(self) -> str:
+        """Return wiki/log.md as text, or empty string if missing."""
+        meta = await anyio.to_thread.run_sync(self._find_log_metadata_sync)
+        if meta is None:
+            return ""
+        content = await anyio.to_thread.run_sync(self._download_sync, meta["id"])
+        return content.decode("utf-8")
+
+    async def append_log(self, entry: LogEntry) -> None:
+        """Read-modify-write append, serialized within this process by a lock.
+
+        Drive has no atomic append; cross-process appends are racy and
+        out of scope for Phase 2B (single-instance MCP only).
+        """
+        addition = (serialize_log_entry(entry) + "\n\n").encode("utf-8")
+        async with self._log_lock:
+            await anyio.to_thread.run_sync(self._append_log_sync, addition)
+
+    def _find_log_metadata_sync(self) -> dict[str, Any] | None:
+        q = f"name='log.md' and '{self._wiki_folder_id}' in parents and trashed=false"
+        result = self._service.files().list(q=q, fields="files(id,name)", pageSize=2).execute()
+        files = result.get("files", [])
+        return files[0] if files else None
+
+    def _append_log_sync(self, addition: bytes) -> None:
+        meta = self._find_log_metadata_sync()
+        if meta is None:
+            media = MediaInMemoryUpload(addition, mimetype="text/markdown")
+            self._service.files().create(
+                body={"name": "log.md", "parents": [self._wiki_folder_id]},
+                media_body=media,
+                fields="id",
+            ).execute()
+            return
+
+        existing = self._service.files().get_media(fileId=meta["id"]).execute()
+        new_body = existing + addition
+        media = MediaInMemoryUpload(new_body, mimetype="text/markdown")
+        self._service.files().update(
+            fileId=meta["id"],
+            media_body=media,
+            fields="id",
+        ).execute()
 
 
 def _parse_drive_time(s: str) -> datetime:
