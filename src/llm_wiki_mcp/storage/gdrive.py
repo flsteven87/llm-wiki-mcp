@@ -114,6 +114,16 @@ class GoogleDriveStorage:
     def _download_sync(self, file_id: str) -> bytes:
         return self._service.files().get_media(fileId=file_id).execute()
 
+    async def list_pages(self) -> list[str]:
+        """Return all slugs present under pages_folder_id, sorted."""
+        names = await anyio.to_thread.run_sync(self._list_page_names_sync)
+        return sorted(name[:-3] for name in names if name.endswith(".md"))
+
+    def _list_page_names_sync(self) -> list[str]:
+        q = f"'{self._pages_folder_id}' in parents and trashed=false"
+        result = self._service.files().list(q=q, fields="files(name)", pageSize=100).execute()
+        return [f["name"] for f in result.get("files", [])]
+
 
 def _parse_drive_time(s: str) -> datetime:
     """Drive returns RFC 3339 strings like '2026-04-07T12:00:00.000Z'."""

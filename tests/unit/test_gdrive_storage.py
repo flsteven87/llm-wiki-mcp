@@ -72,3 +72,28 @@ async def test_read_page_validates_slug():
     storage = _make_storage_with_folders(drive)
     with pytest.raises(WikiPathError):
         await storage.read_page("Bad Slug!")
+
+
+async def test_list_pages_returns_sorted_slugs():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    for name in ["banana.md", "apple.md", "cherry.md"]:
+        drive._seed_file(name=name, parents=[storage._pages_folder_id], content=b"")
+
+    slugs = await storage.list_pages()
+    assert slugs == ["apple", "banana", "cherry"]
+
+
+async def test_list_pages_empty_when_no_files():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    assert await storage.list_pages() == []
+
+
+async def test_list_pages_ignores_non_md_files():
+    drive = FakeDrive()
+    storage = _make_storage_with_folders(drive)
+    drive._seed_file(name="page.md", parents=[storage._pages_folder_id], content=b"")
+    drive._seed_file(name="notes.txt", parents=[storage._pages_folder_id], content=b"")
+
+    assert await storage.list_pages() == ["page"]
