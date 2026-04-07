@@ -18,10 +18,8 @@ What it does NOT do:
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, NamedTuple
-
-import anyio
 
 from llm_wiki_mcp.log_format import parse_log_entries
 from llm_wiki_mcp.models import Inventory, InventoryItem, Mention
@@ -34,6 +32,7 @@ class _RawPage(NamedTuple):
     frontmatter: dict[str, Any]
     links_out: list[str]
     etag: str
+    mtime: datetime
 
 
 async def wiki_inventory(
@@ -53,7 +52,13 @@ async def wiki_inventory(
     for slug in slugs:
         page_read = await storage.read_page(slug)
         fm, _stripped, links_out = parse_page(page_read.body)
-        raw[slug] = _RawPage(page_read.body, fm, links_out, page_read.etag)
+        raw[slug] = _RawPage(
+            body=page_read.body,
+            frontmatter=fm,
+            links_out=links_out,
+            etag=page_read.etag,
+            mtime=page_read.mtime,
+        )
 
     inbound: dict[str, list[str]] = {s: [] for s in slugs}
     for src_slug, page in raw.items():
@@ -61,24 +66,18 @@ async def wiki_inventory(
             if tgt in inbound:
                 inbound[tgt].append(src_slug)
 
-    # NOTE: reaches into storage.wiki_root/page_dir for mtime — layer leak
-    # to be cleaned up when the Storage Protocol is extracted in Phase 2
-    # (read_page should return mtime alongside etag).
-    page_dir_path = storage.wiki_root / storage.page_dir
-    items: list[InventoryItem] = []
-    for slug, page in raw.items():
-        stat = await anyio.Path(page_dir_path / f"{slug}.md").stat()
-        items.append(
-            InventoryItem(
-                slug=slug,
-                frontmatter=page.frontmatter,
-                body_length=len(page.body),
-                mtime=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
-                etag=page.etag,
-                links_out=page.links_out,
-                links_in=sorted(set(inbound[slug])),
-            )
+    items: list[InventoryItem] = [
+        InventoryItem(
+            slug=slug,
+            frontmatter=page.frontmatter,
+            body_length=len(page.body),
+            mtime=page.mtime,
+            etag=page.etag,
+            links_out=page.links_out,
+            links_in=sorted(set(inbound[slug])),
         )
+        for slug, page in raw.items()
+    ]
 
     log_entries = parse_log_entries(await storage.read_log())
 
