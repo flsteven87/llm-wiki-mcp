@@ -1,0 +1,65 @@
+# Wiki schema
+
+This wiki follows Karpathy's LLM Wiki pattern
+(https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+
+- **Topic**: {{TOPIC}}
+- **Page language**: {{LANGUAGE}}
+
+## Layers
+
+- `raw/` — immutable source archive. Read, never write.
+- `wiki/pages/` — LLM-authored pages. One file per page.
+- `wiki/index.md` — catalog of everything in the wiki, organized by
+  category, updated on every ingest.
+- `wiki/log.md` — append-only chronological record of every operation.
+
+## Operations
+
+Three operations, per Karpathy:
+
+- **ingest** — process a new source. Read it, discuss key takeaways,
+  write a summary page, update the index, update relevant entity and
+  concept pages, append a log entry. A single ingest may touch 10–15
+  pages.
+- **query** — answer a question against the wiki. Search the index,
+  read relevant pages, synthesize a cited answer. Good answers should
+  be filed back as new pages (typically under `synthesis`).
+- **lint** — health-check the wiki. Look for contradictions between
+  pages, stale claims, orphan pages, missing concept pages, missing
+  cross-references, and data gaps worth filling with a web search.
+
+## Page categories
+
+Co-evolve these freely as your domain matures:
+
+- `summary` — one page per ingested source
+- `entity` — people, organizations, products, papers
+- `concept` — ideas, techniques, frameworks
+- `comparison` — side-by-side analyses
+- `overview` — high-level framings across many pages
+- `synthesis` — filed answers to queries that compound over time
+
+## Page conventions
+
+- Links use Obsidian-style `[[slug]]`. Slugs are lowercase, dashes
+  between words, at least two characters.
+- Frontmatter is free-form. Suggested fields: `type`, `created`,
+  `updated`, `tags`, `sources`.
+
+## Log format
+
+Each entry starts with:
+
+    ## [YYYY-MM-DD] <operation> | <title>
+
+This makes the log greppable: `grep "^## \[" log.md | tail -5` shows
+the last five entries. Keep operation strings consistent.
+
+## Editing this file
+
+This schema is yours. Edit it as your workflow evolves — add page
+categories, tighten conventions, document domain-specific rules. The
+llm-wiki-mcp server enforces atomic writes, etag-based conflict
+detection, append-only log integrity, and path containment. Page shape
+and schema are yours to evolve.
