@@ -19,6 +19,8 @@ from datetime import date
 
 import pytest
 
+from llm_wiki_mcp.errors import WikiNotFoundError
+
 pytest.importorskip("googleapiclient")
 
 _FOLDER_ID = os.environ.get("LLM_WIKI_GDRIVE_TEST_FOLDER_ID")
@@ -60,9 +62,10 @@ async def test_round_trip_against_real_drive(storage):
     # Clean slate: try to read; if exists, write with its etag.
     try:
         existing = await storage.read_page(slug)
-        etag = await storage.write_page(slug, body, expected_etag=existing.etag)
-    except Exception:
+    except WikiNotFoundError:
         etag = await storage.write_page(slug, body)
+    else:
+        etag = await storage.write_page(slug, body, expected_etag=existing.etag)
 
     page = await storage.read_page(slug)
     assert page.body == body

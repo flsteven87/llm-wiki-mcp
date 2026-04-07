@@ -1,7 +1,7 @@
 """WikiStorage Protocol + PageRead NamedTuple tests.
 
 The Protocol is the contract between tool code and any storage backend.
-LocalFilesystemStorage must satisfy it; so will GoogleDriveStorage in Phase 2.
+Both LocalFilesystemStorage and GoogleDriveStorage must satisfy it.
 """
 
 from __future__ import annotations

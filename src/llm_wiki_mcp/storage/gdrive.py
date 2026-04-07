@@ -11,9 +11,9 @@ Folder layout (mirrors Local):
 
 Init (synchronous, one-shot at server startup):
 - `from_root_folder` resolves the `wiki` then `pages` subfolders by name.
-- Both must already exist; we do NOT auto-create. Document this in CLI help.
+- Both must already exist; we do NOT auto-create.
 
-Per-request methods (added in later tasks):
+Per-request methods:
 - All Drive calls are wrapped in `await anyio.to_thread.run_sync(...)` so
   the async Protocol is honored without blocking the event loop.
 
