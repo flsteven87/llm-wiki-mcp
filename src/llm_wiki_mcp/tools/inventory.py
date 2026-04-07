@@ -51,9 +51,9 @@ async def wiki_inventory(
 
     raw: dict[str, _RawPage] = {}
     for slug in slugs:
-        body_text, etag = await storage.read_page(slug)
-        fm, _stripped, links_out = parse_page(body_text)
-        raw[slug] = _RawPage(body_text, fm, links_out, etag)
+        page_read = await storage.read_page(slug)
+        fm, _stripped, links_out = parse_page(page_read.body)
+        raw[slug] = _RawPage(page_read.body, fm, links_out, page_read.etag)
 
     inbound: dict[str, list[str]] = {s: [] for s in slugs}
     for src_slug, page in raw.items():

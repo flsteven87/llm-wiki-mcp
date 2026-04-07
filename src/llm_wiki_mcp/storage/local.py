@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import os
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import anyio
@@ -34,6 +35,7 @@ from llm_wiki_mcp.errors import (
 )
 from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import resolve_under_root, validate_slug
+from llm_wiki_mcp.storage import PageRead
 
 _DEFAULT_PAGE_DIR = "wiki/pages"
 _DEFAULT_LOG_FILE = "wiki/log.md"
@@ -74,8 +76,8 @@ class LocalFilesystemStorage:
         rel = f"{self.page_dir}/{slug}.md"
         return resolve_under_root(self.wiki_root, rel)
 
-    async def read_page(self, slug: str) -> tuple[str, str]:
-        """Return (body, etag)."""
+    async def read_page(self, slug: str) -> PageRead:
+        """Return PageRead(body, etag, mtime) for the given slug."""
         path = self._page_path(slug)
         apath = anyio.Path(path)
         try:
@@ -84,7 +86,8 @@ class LocalFilesystemStorage:
             raise WikiNotFoundError(f"page not found: {slug}", slug=slug) from e
         stat = await apath.stat()
         etag = _compute_etag(body_bytes, stat.st_mtime_ns)
-        return body_bytes.decode("utf-8"), etag
+        mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+        return PageRead(body=body_bytes.decode("utf-8"), etag=etag, mtime=mtime)
 
     async def write_page(
         self,

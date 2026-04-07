@@ -12,12 +12,12 @@ from llm_wiki_mcp.storage.local import LocalFilesystemStorage
 
 async def wiki_read(storage: LocalFilesystemStorage, *, slug: str) -> Page:
     """Read one page; return parsed frontmatter, body, links, and etag."""
-    raw_text, etag = await storage.read_page(slug)
-    fm, _stripped_body, links = parse_page(raw_text)
+    page_read = await storage.read_page(slug)
+    fm, _stripped_body, links = parse_page(page_read.body)
     return Page(
         slug=slug,
-        body=raw_text,  # full original including frontmatter, for round-trip writes
-        etag=etag,
+        body=page_read.body,  # full original including frontmatter, for round-trip writes
+        etag=page_read.etag,
         frontmatter=fm,
         links_out=links,
     )

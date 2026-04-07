@@ -45,9 +45,24 @@ def storage(wiki: Path) -> LocalFilesystemStorage:
 
 async def test_write_then_read_round_trip(storage: LocalFilesystemStorage):
     new_etag = await storage.write_page("hello", "# Hello\n")
-    body, etag = await storage.read_page("hello")
-    assert body == "# Hello\n"
-    assert etag == new_etag
+    page = await storage.read_page("hello")
+    assert page.body == "# Hello\n"
+    assert page.etag == new_etag
+
+
+async def test_read_page_returns_mtime(storage: LocalFilesystemStorage):
+    """read_page must return a timezone-aware UTC datetime for mtime.
+
+    Why this exists: wiki_inventory used to stat the file directly to
+    get mtime (layer leak). The Protocol contract promises mtime comes
+    from read_page itself.
+    """
+    from datetime import datetime
+
+    await storage.write_page("pg", "v1")
+    page = await storage.read_page("pg")
+    assert isinstance(page.mtime, datetime)
+    assert page.mtime.tzinfo is not None
 
 
 async def test_etag_changes_on_each_write(storage: LocalFilesystemStorage):
@@ -129,8 +144,8 @@ async def test_atomic_write_no_partial_file(storage: LocalFilesystemStorage, wik
     rename, not copy-then-delete).
     """
     await storage.write_page("pg", "v1")
-    e1 = await storage.read_page("pg")
-    await storage.write_page("pg", "v2-much-longer-content", expected_etag=e1[1])
+    page = await storage.read_page("pg")
+    await storage.write_page("pg", "v2-much-longer-content", expected_etag=page.etag)
     # Walk the page dir; nothing should match *.tmp.*
     page_dir = wiki / "wiki" / "pages"
     leftovers = list(page_dir.glob("*.tmp.*"))
