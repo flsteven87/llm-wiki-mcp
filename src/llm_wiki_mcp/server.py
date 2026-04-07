@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 from datetime import date as date_cls
 from pathlib import Path
+from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -39,7 +40,7 @@ def build_server(*, wiki_root: Path) -> FastMCP:
             openWorldHint=False,
         )
     )
-    async def wiki_read(slug: str):
+    async def wiki_read(slug: str) -> dict[str, Any]:
         """Read one wiki page. Returns frontmatter, body, outgoing links, and etag."""
         page = await _wiki_read(storage, slug=slug)
         return page.model_dump()
@@ -69,7 +70,7 @@ def build_server(*, wiki_root: Path) -> FastMCP:
         title: str,
         timestamp: date_cls | None = None,
         extra_lines: list[str] | None = None,
-    ):
+    ) -> dict[str, Any]:
         """Append an entry to wiki/log.md in Karpathy's format-locked line shape."""
         entry = await _wiki_log_append(
             storage,
@@ -88,7 +89,7 @@ def build_server(*, wiki_root: Path) -> FastMCP:
             openWorldHint=False,
         )
     )
-    async def wiki_inventory(scan_for: list[str] | None = None):
+    async def wiki_inventory(scan_for: list[str] | None = None) -> dict[str, Any]:
         """Return the full wiki graph.
 
         Includes pages, frontmatter, link edges, log entries, and optional
