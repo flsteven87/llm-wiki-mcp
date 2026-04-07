@@ -9,11 +9,11 @@ from __future__ import annotations
 from datetime import date
 
 from llm_wiki_mcp.log_format import LogEntry
-from llm_wiki_mcp.storage.local import LocalFilesystemStorage
+from llm_wiki_mcp.storage import WikiStorage
 
 
 async def wiki_log_append(
-    storage: LocalFilesystemStorage,
+    storage: WikiStorage,
     *,
     operation: str,
     title: str,

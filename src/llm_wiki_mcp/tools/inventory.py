@@ -24,7 +24,7 @@ from typing import Any, NamedTuple
 from llm_wiki_mcp.log_format import parse_log_entries
 from llm_wiki_mcp.models import Inventory, InventoryItem, Mention
 from llm_wiki_mcp.parser import parse_page
-from llm_wiki_mcp.storage.local import LocalFilesystemStorage
+from llm_wiki_mcp.storage import WikiStorage
 
 
 class _RawPage(NamedTuple):
@@ -36,7 +36,7 @@ class _RawPage(NamedTuple):
 
 
 async def wiki_inventory(
-    storage: LocalFilesystemStorage,
+    storage: WikiStorage,
     *,
     scan_for: list[str] | None = None,
 ) -> Inventory:

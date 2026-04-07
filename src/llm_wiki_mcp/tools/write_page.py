@@ -13,11 +13,11 @@ North Star: behaviors not schemas.
 
 from __future__ import annotations
 
-from llm_wiki_mcp.storage.local import LocalFilesystemStorage
+from llm_wiki_mcp.storage import WikiStorage
 
 
 async def wiki_write_page(
-    storage: LocalFilesystemStorage,
+    storage: WikiStorage,
     *,
     slug: str,
     body: str,
