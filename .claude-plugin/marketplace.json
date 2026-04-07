@@ -1,0 +1,25 @@
+{
+  "name": "llm-wiki-mcp",
+  "owner": {
+    "name": "Steven Wu"
+  },
+  "metadata": {
+    "description": "Karpathy-style LLM wiki workflows backed by the llm-wiki-mcp deterministic MCP server",
+    "version": "0.0.0"
+  },
+  "plugins": [
+    {
+      "name": "llm-wiki-skills",
+      "description": "Reference Karpathy LLM Wiki workflows: init, ingest, query, lint, update. Pairs with the llm-wiki-mcp MCP server.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/wiki-init",
+        "./skills/wiki-ingest",
+        "./skills/wiki-query",
+        "./skills/wiki-lint",
+        "./skills/wiki-update"
+      ]
+    }
+  ]
+}

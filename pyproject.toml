@@ -1,0 +1,82 @@
+[project]
+name = "llm-wiki-mcp"
+version = "0.0.0"
+description = "An MCP server for Karpathy-style LLM wikis — persistent, compounding markdown knowledge bases."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.13"
+authors = [
+    { name = "llm-wiki-mcp contributors" },
+]
+keywords = ["mcp", "llm", "wiki", "knowledge-base", "karpathy", "obsidian", "markdown"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = [
+    "fastmcp>=3.0.0",
+    "pydantic>=2.10.0",
+    "python-frontmatter>=1.1.0",
+    "anyio>=4.6.0",
+]
+
+[project.optional-dependencies]
+gdrive = [
+    "google-api-python-client>=2.193.0",
+    "google-auth>=2.49.0",
+    "google-auth-oauthlib>=1.3.0",
+]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+llm-wiki-mcp = "llm_wiki_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/flsteven87/llm-wiki-mcp"
+Issues = "https://github.com/flsteven87/llm-wiki-mcp/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_wiki_mcp"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "C90",      # mccabe complexity
+    "SIM",      # simplify
+    "RUF",      # ruff-specific
+    "PTH",      # use pathlib
+    "S",        # bandit (security)
+]
+ignore = ["S101"]   # allow `assert` in tests
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]   # tests can use anything
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
