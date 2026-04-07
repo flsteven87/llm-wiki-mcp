@@ -26,9 +26,14 @@ Concurrency:
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Any
 
+import anyio
+
 from llm_wiki_mcp.errors import WikiNotFoundError
+from llm_wiki_mcp.slug import validate_slug
+from llm_wiki_mcp.storage import PageRead
 
 
 class GoogleDriveStorage:
@@ -73,6 +78,47 @@ class GoogleDriveStorage:
             wiki_folder_id=wiki_id,
             pages_folder_id=pages_id,
         )
+
+    # ───── Page operations ─────────────────────────────────────────
+
+    async def read_page(self, slug: str) -> PageRead:
+        """Find <slug>.md under pages_folder_id and return PageRead."""
+        validate_slug(slug)
+        meta = await anyio.to_thread.run_sync(self._find_page_metadata_sync, slug)
+        if meta is None:
+            raise WikiNotFoundError(f"page not found: {slug}", slug=slug)
+        content = await anyio.to_thread.run_sync(self._download_sync, meta["id"])
+        return PageRead(
+            body=content.decode("utf-8"),
+            etag=meta["headRevisionId"],
+            mtime=_parse_drive_time(meta["modifiedTime"]),
+        )
+
+    def _find_page_metadata_sync(self, slug: str) -> dict[str, Any] | None:
+        q = f"name='{slug}.md' and '{self._pages_folder_id}' in parents and trashed=false"
+        result = (
+            self._service.files()
+            .list(q=q, fields="files(id,name,headRevisionId,modifiedTime)", pageSize=2)
+            .execute()
+        )
+        files = result.get("files", [])
+        if not files:
+            return None
+        if len(files) > 1:
+            raise WikiNotFoundError(
+                f"ambiguous: multiple {slug}.md files in pages folder",
+                slug=slug,
+            )
+        return files[0]
+
+    def _download_sync(self, file_id: str) -> bytes:
+        return self._service.files().get_media(fileId=file_id).execute()
+
+
+def _parse_drive_time(s: str) -> datetime:
+    """Drive returns RFC 3339 strings like '2026-04-07T12:00:00.000Z'."""
+    # Python 3.13's fromisoformat handles trailing 'Z' since 3.11.
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
 def _find_child_folder_id(service: Any, *, parent_id: str, name: str) -> str | None:
