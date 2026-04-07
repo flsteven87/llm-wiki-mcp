@@ -19,8 +19,7 @@ Per-request methods:
 
 Concurrency:
 - An instance-scoped `asyncio.Lock` serializes log appends within a single
-  MCP server process. Cross-process concurrent appends are racy and out
-  of scope for Phase 2B (documented as a known limitation).
+  MCP server process. Cross-process concurrent appends are not supported.
 """
 
 from __future__ import annotations
@@ -41,6 +40,14 @@ from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import validate_slug
 from llm_wiki_mcp.storage import PageRead
 
+_WIKI_FOLDER_NAME = "wiki"
+_PAGES_FOLDER_NAME = "pages"
+_LOG_FILE_NAME = "log.md"
+_PAGE_SUFFIX = ".md"
+_MARKDOWN_MIME = "text/markdown"
+_PAGE_FIELDS = "files(id,name,headRevisionId,modifiedTime)"
+_NAME_ONLY_FIELDS = "files(id,name)"
+
 
 class GoogleDriveStorage:
     def __init__(
@@ -54,6 +61,7 @@ class GoogleDriveStorage:
         self._wiki_folder_id = wiki_folder_id
         self._pages_folder_id = pages_folder_id
         self._log_lock = asyncio.Lock()
+        self._log_file_id: str | None = None  # cached after first resolve/create
 
     @classmethod
     def from_root_folder(
@@ -62,27 +70,37 @@ class GoogleDriveStorage:
         service: Any,
         root_folder_id: str,
     ) -> GoogleDriveStorage:
-        """Resolve the wiki/pages folder structure under root_folder_id.
+        """Resolve wiki/pages under root_folder_id; raise if either is missing.
 
-        Raises WikiNotFoundError if either folder is missing. We do NOT
-        create them — Phase 2B requires pre-existing structure.
+        Phase 2B does not auto-create folders — surfaces user setup mistakes
+        loudly instead of leaking phantom hierarchies.
         """
-        wiki_id = _find_child_folder_id(service, parent_id=root_folder_id, name="wiki")
-        if wiki_id is None:
+        wiki_meta = _find_unique_child(
+            service,
+            parent_id=root_folder_id,
+            name=_WIKI_FOLDER_NAME,
+            fields=_NAME_ONLY_FIELDS,
+        )
+        if wiki_meta is None:
             raise WikiNotFoundError(
-                f"no 'wiki' folder under root {root_folder_id}",
-                slug="wiki",
+                f"no {_WIKI_FOLDER_NAME!r} folder under root {root_folder_id}",
+                slug=_WIKI_FOLDER_NAME,
             )
-        pages_id = _find_child_folder_id(service, parent_id=wiki_id, name="pages")
-        if pages_id is None:
+        pages_meta = _find_unique_child(
+            service,
+            parent_id=wiki_meta["id"],
+            name=_PAGES_FOLDER_NAME,
+            fields=_NAME_ONLY_FIELDS,
+        )
+        if pages_meta is None:
             raise WikiNotFoundError(
-                f"no 'pages' folder under wiki {wiki_id}",
-                slug="pages",
+                f"no {_PAGES_FOLDER_NAME!r} folder under wiki {wiki_meta['id']}",
+                slug=_PAGES_FOLDER_NAME,
             )
         return cls(
             service=service,
-            wiki_folder_id=wiki_id,
-            pages_folder_id=pages_id,
+            wiki_folder_id=wiki_meta["id"],
+            pages_folder_id=pages_meta["id"],
         )
 
     # ───── Page operations ─────────────────────────────────────────
@@ -97,25 +115,16 @@ class GoogleDriveStorage:
         return PageRead(
             body=content.decode("utf-8"),
             etag=meta["headRevisionId"],
-            mtime=_parse_drive_time(meta["modifiedTime"]),
+            mtime=datetime.fromisoformat(meta["modifiedTime"]),
         )
 
     def _find_page_metadata_sync(self, slug: str) -> dict[str, Any] | None:
-        q = f"name='{slug}.md' and '{self._pages_folder_id}' in parents and trashed=false"
-        result = (
-            self._service.files()
-            .list(q=q, fields="files(id,name,headRevisionId,modifiedTime)", pageSize=2)
-            .execute()
+        return _find_unique_child(
+            self._service,
+            parent_id=self._pages_folder_id,
+            name=f"{slug}{_PAGE_SUFFIX}",
+            fields=_PAGE_FIELDS,
         )
-        files = result.get("files", [])
-        if not files:
-            return None
-        if len(files) > 1:
-            raise WikiNotFoundError(
-                f"ambiguous: multiple {slug}.md files in pages folder",
-                slug=slug,
-            )
-        return files[0]
 
     def _download_sync(self, file_id: str) -> bytes:
         return self._service.files().get_media(fileId=file_id).execute()
@@ -123,12 +132,30 @@ class GoogleDriveStorage:
     async def list_pages(self) -> list[str]:
         """Return all slugs present under pages_folder_id, sorted."""
         names = await anyio.to_thread.run_sync(self._list_page_names_sync)
-        return sorted(name[:-3] for name in names if name.endswith(".md"))
+        return sorted(
+            name.removesuffix(_PAGE_SUFFIX) for name in names if name.endswith(_PAGE_SUFFIX)
+        )
 
     def _list_page_names_sync(self) -> list[str]:
+        """Drain `files.list` across all pages via nextPageToken."""
         q = f"'{self._pages_folder_id}' in parents and trashed=false"
-        result = self._service.files().list(q=q, fields="files(name)", pageSize=100).execute()
-        return [f["name"] for f in result.get("files", [])]
+        names: list[str] = []
+        page_token: str | None = None
+        while True:
+            result = (
+                self._service.files()
+                .list(
+                    q=q,
+                    fields="nextPageToken, files(name)",
+                    pageSize=100,
+                    pageToken=page_token,
+                )
+                .execute()
+            )
+            names.extend(f["name"] for f in result.get("files", []))
+            page_token = result.get("nextPageToken")
+            if not page_token:
+                return names
 
     async def write_page(
         self,
@@ -144,7 +171,7 @@ class GoogleDriveStorage:
           - expected_etag matches headRevisionId   → update
           - expected_etag set but file missing OR mismatch → WikiConflictError
 
-        Note: same TOCTOU window as Local (read-then-write); acceptable for
+        Same TOCTOU window as Local (read-then-write); acceptable for
         single-process MCP. Drive has no native If-Match header on update.
         """
         validate_slug(slug)
@@ -160,7 +187,7 @@ class GoogleDriveStorage:
         expected_etag: str | None,
     ) -> str:
         meta = self._find_page_metadata_sync(slug)
-        media = MediaInMemoryUpload(body_bytes, mimetype="text/markdown")
+        media = MediaInMemoryUpload(body_bytes, mimetype=_MARKDOWN_MIME)
 
         if meta is None:
             if expected_etag is not None:
@@ -173,7 +200,10 @@ class GoogleDriveStorage:
             created = (
                 self._service.files()
                 .create(
-                    body={"name": f"{slug}.md", "parents": [self._pages_folder_id]},
+                    body={
+                        "name": f"{slug}{_PAGE_SUFFIX}",
+                        "parents": [self._pages_folder_id],
+                    },
                     media_body=media,
                     fields="id,headRevisionId,modifiedTime",
                 )
@@ -206,41 +236,56 @@ class GoogleDriveStorage:
         meta = await anyio.to_thread.run_sync(self._find_log_metadata_sync)
         if meta is None:
             return ""
+        self._log_file_id = meta["id"]
         content = await anyio.to_thread.run_sync(self._download_sync, meta["id"])
         return content.decode("utf-8")
 
     async def append_log(self, entry: LogEntry) -> None:
         """Read-modify-write append, serialized within this process by a lock.
 
-        Drive has no atomic append; cross-process appends are racy and
-        out of scope for Phase 2B (single-instance MCP only).
+        Drive has no atomic append; cross-process appends are not supported.
         """
         addition = (serialize_log_entry(entry) + "\n\n").encode("utf-8")
         async with self._log_lock:
             await anyio.to_thread.run_sync(self._append_log_sync, addition)
 
     def _find_log_metadata_sync(self) -> dict[str, Any] | None:
-        q = f"name='log.md' and '{self._wiki_folder_id}' in parents and trashed=false"
-        result = self._service.files().list(q=q, fields="files(id,name)", pageSize=2).execute()
-        files = result.get("files", [])
-        return files[0] if files else None
+        return _find_unique_child(
+            self._service,
+            parent_id=self._wiki_folder_id,
+            name=_LOG_FILE_NAME,
+            fields=_NAME_ONLY_FIELDS,
+            raise_on_multiple=False,
+        )
 
     def _append_log_sync(self, addition: bytes) -> None:
-        meta = self._find_log_metadata_sync()
-        if meta is None:
-            media = MediaInMemoryUpload(addition, mimetype="text/markdown")
-            self._service.files().create(
-                body={"name": "log.md", "parents": [self._wiki_folder_id]},
-                media_body=media,
-                fields="id",
-            ).execute()
-            return
+        file_id = self._log_file_id
+        if file_id is None:
+            meta = self._find_log_metadata_sync()
+            if meta is None:
+                media = MediaInMemoryUpload(addition, mimetype=_MARKDOWN_MIME)
+                created = (
+                    self._service.files()
+                    .create(
+                        body={
+                            "name": _LOG_FILE_NAME,
+                            "parents": [self._wiki_folder_id],
+                        },
+                        media_body=media,
+                        fields="id",
+                    )
+                    .execute()
+                )
+                self._log_file_id = created["id"]
+                return
+            file_id = meta["id"]
+            self._log_file_id = file_id
 
-        existing = self._service.files().get_media(fileId=meta["id"]).execute()
+        existing = self._service.files().get_media(fileId=file_id).execute()
         new_body = existing + addition
-        media = MediaInMemoryUpload(new_body, mimetype="text/markdown")
+        media = MediaInMemoryUpload(new_body, mimetype=_MARKDOWN_MIME)
         self._service.files().update(
-            fileId=meta["id"],
+            fileId=file_id,
             media_body=media,
             fields="id",
         ).execute()
@@ -255,27 +300,31 @@ class GoogleDriveStorage:
         )
 
 
-def _parse_drive_time(s: str) -> datetime:
-    """Drive returns RFC 3339 strings like '2026-04-07T12:00:00.000Z'."""
-    # Python 3.13's fromisoformat handles trailing 'Z' since 3.11.
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+def _find_unique_child(
+    service: Any,
+    *,
+    parent_id: str,
+    name: str,
+    fields: str,
+    raise_on_multiple: bool = True,
+) -> dict[str, Any] | None:
+    """Find a single child named `name` directly under `parent_id`.
 
-
-def _find_child_folder_id(service: Any, *, parent_id: str, name: str) -> str | None:
-    """Sync Drive query: find a folder named `name` directly under `parent_id`.
-
-    Returns the folder id, or None if not found. Raises if multiple matches
-    (ambiguity is a user-side mistake we should surface, not silently pick).
+    Returns the file metadata dict, or None if not found. When multiple
+    matches exist:
+      - raise_on_multiple=True (folder/page lookups): raise WikiNotFoundError
+        with an "ambiguous" message — surfaces user setup mistakes loudly.
+      - raise_on_multiple=False (log lookup): silently return the first.
     """
     q = f"name='{name}' and '{parent_id}' in parents and trashed=false"
-    result = service.files().list(q=q, fields="files(id,name)", pageSize=10).execute()
+    result = service.files().list(q=q, fields=fields, pageSize=2).execute()
     files = result.get("files", [])
     if not files:
         return None
-    if len(files) > 1:
+    if raise_on_multiple and len(files) > 1:
         ids = ", ".join(f["id"] for f in files)
         raise WikiNotFoundError(
-            f"ambiguous: multiple {name!r} folders under {parent_id} (ids: {ids})",
+            f"ambiguous: multiple {name!r} entries under {parent_id} (ids: {ids})",
             slug=name,
         )
-    return files[0]["id"]
+    return files[0]

@@ -108,7 +108,10 @@ class _FakeFilesResource:
         q: str = "",
         fields: str | None = None,
         pageSize: int = 100,
+        pageToken: str | None = None,
     ) -> _FakeRequest:
+        # FakeDrive returns all matches in one shot; pageToken is accepted
+        # so production pagination loops compile, then ignored.
         return _FakeRequest(lambda: self._do_list(q))
 
     def get_media(self, *, fileId: str) -> _FakeRequest:
