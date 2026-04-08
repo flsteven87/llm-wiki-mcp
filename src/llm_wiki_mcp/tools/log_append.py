@@ -31,6 +31,6 @@ async def wiki_log_append(
         fields["timestamp"] = timestamp
     if extra_lines is not None:
         fields["extra_lines"] = extra_lines
-    entry = LogEntry(**fields)
+    entry = LogEntry.model_validate(fields)
     await storage.append_log(entry)
     return entry
