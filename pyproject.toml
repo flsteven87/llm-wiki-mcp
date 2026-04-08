@@ -1,7 +1,7 @@
 [project]
 name = "llm-wiki-mcp"
 version = "0.1.0"
-description = "An MCP server for Karpathy-style LLM wikis — persistent, compounding markdown knowledge bases."
+description = "MCP server + Claude Code skills for Karpathy-style LLM wikis: persistent markdown knowledge bases your agent grows over time."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
