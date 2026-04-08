@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [
-    { name = "llm-wiki-mcp contributors" },
+    { name = "Steven Wu", email = "flsteven87@gmail.com" },
 ]
 keywords = ["mcp", "llm", "wiki", "knowledge-base", "karpathy", "obsidian", "markdown"]
 classifiers = [
