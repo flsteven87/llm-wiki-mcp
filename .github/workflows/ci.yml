@@ -25,5 +25,7 @@ jobs:
         run: uv run ruff check .
       - name: Format check
         run: uv run ruff format --check .
+      - name: Type check
+        run: uv run pyright src/llm_wiki_mcp
       - name: Test
         run: uv run pytest -v
