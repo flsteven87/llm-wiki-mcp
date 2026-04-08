@@ -25,10 +25,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastmcp>=3.0.0",
-    "pydantic>=2.10.0",
-    "python-frontmatter>=1.1.0",
-    "anyio>=4.6.0",
+    # Upper bounds are deliberate for a first PyPI publish: both fastmcp
+    # and pydantic have load-bearing runtime behavior (schema generation,
+    # tool annotations, initialize handshake) that can move on a major
+    # bump. Re-evaluate the ceilings on each release.
+    "fastmcp>=3.0.0,<4",
+    "pydantic>=2.10.0,<3",
+    "python-frontmatter>=1.1.0,<2",
+    "anyio>=4.6.0,<5",
 ]
 
 [project.optional-dependencies]

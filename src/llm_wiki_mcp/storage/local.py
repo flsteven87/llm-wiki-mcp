@@ -33,6 +33,14 @@ from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import resolve_under_root, validate_slug
 from llm_wiki_mcp.storage import PageRead
 
+# Karpathy's wiki layout is fixed: `pages/` holds page files, `log.md` holds
+# the session log. We deliberately do NOT make these configurable — one
+# canonical layout keeps skills, tools, and downstream tooling portable
+# across every wiki, and it prevents a class of ctor-time path-escape bugs
+# that would otherwise have to be guarded against.
+_PAGE_DIR = "pages"
+_LOG_FILE = "log.md"
+
 
 def _compute_etag(body: bytes, mtime_ns: int) -> str:
     """Etag = first 16 hex chars of sha256(body) || `-` || mtime_ns.
@@ -46,23 +54,15 @@ def _compute_etag(body: bytes, mtime_ns: int) -> str:
 
 
 class LocalFilesystemStorage:
-    def __init__(
-        self,
-        *,
-        wiki_root: Path | str,
-        page_dir: str = "pages",
-        log_file: str = "log.md",
-    ) -> None:
+    def __init__(self, *, wiki_root: Path | str) -> None:
         self.wiki_root = Path(wiki_root).resolve()
-        self.page_dir = page_dir
-        self.log_file = log_file
-        (self.wiki_root / self.page_dir).mkdir(parents=True, exist_ok=True)
+        (self.wiki_root / _PAGE_DIR).mkdir(parents=True, exist_ok=True)
 
     # ───── Page operations ─────────────────────────────────────────
 
     def _page_path(self, slug: str) -> Path:
         validate_slug(slug)
-        rel = f"{self.page_dir}/{slug}.md"
+        rel = f"{_PAGE_DIR}/{slug}.md"
         return resolve_under_root(self.wiki_root, rel)
 
     async def read_page(self, slug: str) -> PageRead:
@@ -130,7 +130,7 @@ class LocalFilesystemStorage:
     # ───── Log operations ──────────────────────────────────────────
 
     def _log_path(self) -> Path:
-        return resolve_under_root(self.wiki_root, self.log_file)
+        return resolve_under_root(self.wiki_root, _LOG_FILE)
 
     async def append_log(self, entry: LogEntry) -> None:
         """O_APPEND single write. Concurrent-safe under POSIX small writes.
@@ -173,8 +173,8 @@ class LocalFilesystemStorage:
         )
 
     async def list_pages(self) -> list[str]:
-        """Return all slugs present under page_dir, sorted."""
-        page_dir_path = self.wiki_root / self.page_dir
+        """Return all slugs present under pages/, sorted."""
+        page_dir_path = self.wiki_root / _PAGE_DIR
         if not page_dir_path.exists():
             return []
         return sorted(p.stem for p in page_dir_path.glob("*.md") if p.is_file())

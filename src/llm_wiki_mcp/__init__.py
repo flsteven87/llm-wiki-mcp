@@ -10,9 +10,14 @@ Public API (stable across patch / minor versions):
 - `PageRead` — the NamedTuple returned by `WikiStorage.read_page`:
   `(body, etag, mtime)`.
 
+- `LogEntry` — the Pydantic model accepted by `WikiStorage.append_log`.
+  Format-locked to Karpathy's `## [YYYY-MM-DD] operation | Title` line
+  shape. Part of the Protocol surface, therefore part of the public API.
+
 - Typed domain errors — `WikiError` and its subclasses. Catch these at
-  the boundary of your own code; the MCP tool layer maps each to a
-  structured error response for the client LLM.
+  the boundary of your own code; the MCP tool layer catches each and
+  re-raises as a FastMCP `ToolError` so the client LLM sees a
+  structured, recoverable message.
 
 Composition root (`llm_wiki_mcp.server.create_server`) is exported from
 its own module rather than the package root because it's the one piece
@@ -31,6 +36,7 @@ from llm_wiki_mcp.errors import (
     WikiPermissionError,
     WikiSchemaViolationError,
 )
+from llm_wiki_mcp.log_format import LogEntry
 from llm_wiki_mcp.storage import PageRead, WikiStorage
 
 try:
@@ -39,6 +45,7 @@ except PackageNotFoundError:  # pragma: no cover — only hit if package not ins
     __version__ = "0.0.0+unknown"
 
 __all__ = [
+    "LogEntry",
     "PageRead",
     "WikiConflictError",
     "WikiError",

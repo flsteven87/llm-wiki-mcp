@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Karpathy-style LLM wiki workflows backed by the llm-wiki-mcp deterministic MCP server",
-    "version": "0.0.0"
+    "version": "0.1.0"
   },
   "plugins": [
     {
