@@ -105,8 +105,9 @@ When filing:
    category is `synthesis`. Include frontmatter fields the schema
    requires, the question as a heading, the cited answer, and a
    "Sources" section listing every `[[slug]]` you cited.
-3. `wiki_write_page(slug, body, etag=None)`. `etag=None` asserts
-   the page does not exist. On conflict, pick a different slug.
+3. `wiki_write_page(slug=..., body=..., etag=None)`. `etag=None`
+   asserts the page does not exist. On conflict, pick a different
+   slug.
 4. Add a one-line entry under the correct category in
    `wiki/index.md` using host `Read`/`Write` (the MCP tools do not
    touch the index).

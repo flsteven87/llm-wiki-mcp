@@ -59,9 +59,10 @@ These do not require reading page bodies.
 **Check 3 — Orphan pages.** Any page with `links_in == []` is an
 orphan. `summary` pages are expected to be reached from the index
 rather than from other pages, so they are not automatically orphans;
-flag them only if they also have no index entry. Entity, concept,
+host `Read` `wiki/index.md` once and cross-check — flag a summary
+page only if it has no index entry either. Entity, concept,
 comparison, overview, and synthesis pages with zero inbound links
-are reportable orphans.
+are reportable orphans regardless of index presence.
 
 **Dangling links (bonus, mechanical).** Any slug in `links_out` that
 is not present in the `pages` list is a dangling link. Not in
