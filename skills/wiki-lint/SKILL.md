@@ -1,6 +1,6 @@
 ---
 name: wiki-lint
-description: Health-check an existing Karpathy-style LLM wiki and produce a structured findings report covering contradictions between pages, stale claims superseded by newer sources, orphan pages with no inbound links, important concepts mentioned but lacking their own page, missing cross-references, and data gaps worth filling with a web search — the six checks from Karpathy's LLM Wiki gist. Also suggests new questions to investigate and new sources to look for. Use when the user says "lint the wiki", "health check the wiki", "audit the wiki", "find orphans", "what's broken in the wiki", "what's missing from the wiki", or after every five to ten ingests as routine maintenance. Reads wiki/CLAUDE.md for the active schema and drives all wiki access through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_log_append). Reports findings only — it does NOT auto-fix. Fixes happen through wiki-ingest (when a new source corrects something) or through direct page edits the user approves. Do NOT use when the user is asking a substantive question (use wiki-query) or adding a source (use wiki-ingest). Do NOT use when no wiki exists yet — run wiki-init first.
+description: Health-check an existing Karpathy-style LLM wiki and produce a structured findings report covering contradictions between pages, stale claims superseded by newer sources, orphan pages with no inbound links, important concepts mentioned but lacking their own page, missing cross-references, and data gaps worth filling with a web search — the six checks from Karpathy's LLM Wiki gist. Also suggests new questions to investigate and new sources to look for. Use when the user says "lint the wiki", "health check the wiki", "audit the wiki", "find orphans", "what's broken in the wiki", "what's missing from the wiki", or after every five to ten ingests as routine maintenance. Reads CLAUDE.md for the active schema and drives all wiki access through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_log_append). Reports findings only — it does NOT auto-fix. Fixes happen through wiki-ingest (when a new source corrects something) or through direct page edits the user approves. Do NOT use when the user is asking a substantive question (use wiki-query) or adding a source (use wiki-ingest). Do NOT use when no wiki exists yet — run wiki-init first.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -37,7 +37,7 @@ health check would defeat the point.
 
 ## Pre-flight
 
-Read `wiki/CLAUDE.md`. This is the authoritative schema — page
+Read `CLAUDE.md`. This is the authoritative schema — page
 categories, frontmatter fields, link conventions, and operation
 vocabulary. The user may have evolved it since `wiki-init`. Honor
 the current state, not the defaults.
@@ -59,7 +59,7 @@ These do not require reading page bodies.
 **Check 3 — Orphan pages.** Any page with `links_in == []` is an
 orphan. `summary` pages are expected to be reached from the index
 rather than from other pages, so they are not automatically orphans;
-host `Read` `wiki/index.md` once and cross-check — flag a summary
+host `Read` `index.md` once and cross-check — flag a summary
 page only if it has no index entry either. Entity, concept,
 comparison, overview, and synthesis pages with zero inbound links
 are reportable orphans regardless of index presence.
@@ -122,7 +122,7 @@ evidence. Frontmatter `updated` dates are a weak hint — a page not
 updated since an ingest that should have touched it is suspect.
 
 **Check 6 — Data gaps.** Step back from the wiki and ask: given
-this topic (declared in `wiki/CLAUDE.md`), what is conspicuously
+this topic (declared in `CLAUDE.md`), what is conspicuously
 missing? Which entities are referenced but uninvestigated? Which
 obvious primary sources have not been ingested? This is where the
 LLM's general knowledge earns its keep. Suggest specific searches
@@ -170,7 +170,7 @@ next-move suggestions).
         extra_lines=[<optional: top one or two findings>],
     )
 
-Use `operation="lint"` unless `wiki/CLAUDE.md` has defined different
+Use `operation="lint"` unless `CLAUDE.md` has defined different
 vocabulary.
 
 ## Tool cheatsheet

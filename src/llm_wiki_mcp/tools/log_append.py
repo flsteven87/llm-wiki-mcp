@@ -1,4 +1,4 @@
-"""wiki_log_append tool — append a Karpathy-formatted entry to wiki/log.md.
+"""wiki_log_append tool — append a Karpathy-formatted entry to log.md.
 
 Annotations (set by server.py at registration time):
   readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
@@ -20,7 +20,7 @@ async def wiki_log_append(
     timestamp: date | None = None,
     extra_lines: list[str] | None = None,
 ) -> LogEntry:
-    """Append one entry to wiki/log.md.
+    """Append one entry to log.md.
 
     Format-locks the line via LogEntry validation. Operation may be any
     non-empty token without whitespace, brackets, or pipes — we do NOT

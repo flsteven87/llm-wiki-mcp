@@ -12,10 +12,6 @@ Behavioral guarantees:
   cannot interleave bytes within an entry.
 - write_raw_file always raises WikiPermissionError. (Method exists so the
   rejection is testable, not so writes are possible.)
-
-We deliberately do NOT define a Storage Protocol abstract base in this
-plan. Concretion first; the Protocol shape gets locked when the second
-backend (GoogleDriveStorage) forces it in a future plan.
 """
 
 from __future__ import annotations
@@ -37,8 +33,8 @@ from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import resolve_under_root, validate_slug
 from llm_wiki_mcp.storage import PageRead
 
-_DEFAULT_PAGE_DIR = "wiki/pages"
-_DEFAULT_LOG_FILE = "wiki/log.md"
+_DEFAULT_PAGE_DIR = "pages"
+_DEFAULT_LOG_FILE = "log.md"
 _DEFAULT_RAW_DIR = "raw"
 
 

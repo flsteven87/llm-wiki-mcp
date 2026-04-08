@@ -8,11 +8,16 @@ This wiki follows Karpathy's LLM Wiki pattern
 
 ## Layers
 
-- `raw/` — immutable source archive. Read, never write.
-- `wiki/pages/` — LLM-authored pages. One file per page.
-- `wiki/index.md` — catalog of everything in the wiki, organized by
+Paths are relative to this wiki folder (the one MCP's `--wiki-root`
+points at). `raw/` lives as a sibling of this folder at the project
+level — MCP never touches it; skills read from it via host `Read`.
+
+- `pages/` — LLM-authored pages. One file per page.
+- `index.md` — catalog of everything in the wiki, organized by
   category, updated on every ingest.
-- `wiki/log.md` — append-only chronological record of every operation.
+- `log.md` — append-only chronological record of every operation.
+- `../raw/` — immutable source archive at the project level. Read,
+  never write.
 
 ## Operations
 

@@ -1,6 +1,6 @@
 ---
 name: wiki-ingest
-description: Ingest a new source (URL, file, paper, transcript, pasted text) into an existing Karpathy-style LLM wiki. Reads the source, discusses key takeaways with the user, writes a summary page, updates the index, updates relevant entity and concept pages across the wiki, and appends an entry to the log — the exact flow from Karpathy's LLM Wiki pattern. A single ingest may touch 10–15 pages. Use this whenever the user gives you a URL, a file path, or pasted text and asks to "add this to the wiki", "ingest", "process", "file this", or simply pastes a source into a session where a wiki is active. Also use when the user says "add this paper to the knowledge base" or "can you process this article for my wiki". Reads wiki/CLAUDE.md for the active schema and drives all wiki mutations through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_write_page, wiki_log_append). Do NOT use when the user wants a plain summary with no wiki context — just summarize directly. Do NOT use when no wiki exists yet — run wiki-init first. Do NOT use for querying the wiki (use wiki-query) or health-checking it (use wiki-lint).
+description: Ingest a new source (URL, file, paper, transcript, pasted text) into an existing Karpathy-style LLM wiki. Reads the source, discusses key takeaways with the user, writes a summary page, updates the index, updates relevant entity and concept pages across the wiki, and appends an entry to the log — the exact flow from Karpathy's LLM Wiki pattern. A single ingest may touch 10–15 pages. Use this whenever the user gives you a URL, a file path, or pasted text and asks to "add this to the wiki", "ingest", "process", "file this", or simply pastes a source into a session where a wiki is active. Also use when the user says "add this paper to the knowledge base" or "can you process this article for my wiki". Reads CLAUDE.md for the active schema and drives all wiki mutations through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_write_page, wiki_log_append). Do NOT use when the user wants a plain summary with no wiki context — just summarize directly. Do NOT use when no wiki exists yet — run wiki-init first. Do NOT use for querying the wiki (use wiki-query) or health-checking it (use wiki-lint).
 license: Complete terms in LICENSE.txt
 ---
 
@@ -30,7 +30,7 @@ at a time with the user in the loop; batch mode is also possible
 
 ## Pre-flight
 
-Read `wiki/CLAUDE.md`. This is the authoritative schema — page
+Read `CLAUDE.md`. This is the authoritative schema — page
 categories, frontmatter fields, link conventions, and operation
 vocabulary. The user may have evolved it since `wiki-init`. Honor
 the current state, not the defaults.
@@ -54,7 +54,7 @@ Ask the user what to emphasize.
 ### 3. Write a summary page in the wiki
 
 Pick a slug (lowercase, dashes, at least two characters). Build
-`body` to match the schema in `wiki/CLAUDE.md`, including any
+`body` to match the schema in `CLAUDE.md`, including any
 frontmatter block. The server does not validate frontmatter shape —
 you are responsible for consistency.
 
@@ -65,7 +65,7 @@ a conflict error, the slug is taken — pick a different one.
 
 ### 4. Update the index
 
-`wiki/index.md` sits outside `wiki/pages/`, so the MCP tools do not
+`index.md` sits outside `pages/`, so the MCP tools do not
 touch it. Read it with the host `Read` tool, add a one-line entry
 under the correct category section, write it back with `Write`.
 
@@ -109,7 +109,7 @@ Link only to slugs that appear in `wiki_inventory.pages`.
 
 The server formats the entry as `## [YYYY-MM-DD] ingest | <title>`
 and guarantees atomic append. Concurrent ingests will not clobber
-each other. Use `operation="ingest"` unless `wiki/CLAUDE.md` has
+each other. Use `operation="ingest"` unless `CLAUDE.md` has
 defined different vocabulary.
 
 ## Tool cheatsheet
@@ -137,5 +137,5 @@ Pause every five sources to report progress.
 
 When done, report: source title, pages created (slugs), pages
 updated (slug + one-line diff reason), and the log entry appended.
-Keep it terse — the user can read `wiki/log.md` or call
+Keep it terse — the user can read `log.md` or call
 `wiki_inventory` for details.

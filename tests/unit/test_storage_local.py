@@ -29,13 +29,19 @@ from llm_wiki_mcp.storage.local import LocalFilesystemStorage
 
 @pytest.fixture
 def wiki(tmp_path: Path) -> Path:
-    root = tmp_path / "wiki-root"
-    root.mkdir()
-    (root / "raw").mkdir()
-    (root / "wiki").mkdir()
-    (root / "wiki" / "log.md").write_text("# Log\n")
-    (root / "wiki" / "index.md").write_text("# Index\n")
-    return root
+    """Seed a flattened wiki folder — --wiki-root points here directly.
+
+    `raw/` lives as a sibling of the wiki folder (project-level convention),
+    NOT inside it. MCP only manages the wiki folder itself.
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    (project_root / "raw").mkdir()
+    wiki_root = project_root / "wiki"
+    wiki_root.mkdir()
+    (wiki_root / "log.md").write_text("# Log\n")
+    (wiki_root / "index.md").write_text("# Index\n")
+    return wiki_root
 
 
 @pytest.fixture
@@ -97,12 +103,12 @@ async def test_read_missing_page_raises(storage: LocalFilesystemStorage):
 
 
 async def test_raw_write_rejected(wiki: Path):
-    """Storage configured with raw_dir='raw' must reject any write into it.
+    """write_raw_file always raises regardless of configured raw_dir.
 
     Karpathy: "Raw sources... are immutable — the LLM reads from them but
     never modifies them."
     """
-    storage = LocalFilesystemStorage(wiki_root=wiki, raw_dir="raw")
+    storage = LocalFilesystemStorage(wiki_root=wiki)
     with pytest.raises(WikiPermissionError):
         await storage.write_raw_file("source.pdf", b"...")
 
@@ -147,6 +153,6 @@ async def test_atomic_write_no_partial_file(storage: LocalFilesystemStorage, wik
     page = await storage.read_page("pg")
     await storage.write_page("pg", "v2-much-longer-content", expected_etag=page.etag)
     # Walk the page dir; nothing should match *.tmp.*
-    page_dir = wiki / "wiki" / "pages"
+    page_dir = wiki / "pages"
     leftovers = list(page_dir.glob("*.tmp.*"))
     assert leftovers == []

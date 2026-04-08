@@ -1,7 +1,7 @@
 """WikiStorage Protocol + PageRead NamedTuple tests.
 
 The Protocol is the contract between tool code and any storage backend.
-Both LocalFilesystemStorage and GoogleDriveStorage must satisfy it.
+Today LocalFilesystemStorage is the only implementor.
 """
 
 from __future__ import annotations
@@ -10,27 +10,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from llm_wiki_mcp.storage import PageRead, WikiStorage
-from llm_wiki_mcp.storage.gdrive import GoogleDriveStorage
 from llm_wiki_mcp.storage.local import LocalFilesystemStorage
-from tests._fakes.drive import FakeDrive
 
 
 def test_local_storage_satisfies_protocol(tmp_path: Path):
     """LocalFilesystemStorage must be a structural subtype of WikiStorage."""
     storage = LocalFilesystemStorage(wiki_root=tmp_path)
-    assert isinstance(storage, WikiStorage)
-
-
-def test_gdrive_storage_satisfies_protocol():
-    """GoogleDriveStorage must be a structural subtype of WikiStorage."""
-    drive = FakeDrive()
-    wiki = drive._seed_file(name="wiki", parents=["root"], content=b"")
-    pages = drive._seed_file(name="pages", parents=[wiki.id], content=b"")
-    storage = GoogleDriveStorage(
-        service=drive,
-        wiki_folder_id=wiki.id,
-        pages_folder_id=pages.id,
-    )
     assert isinstance(storage, WikiStorage)
 
 

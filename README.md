@@ -3,7 +3,7 @@
 An MCP server + Claude Code skills that ship Karpathy's LLM Wiki workflow
 as deterministic tools any MCP client can call.
 
-> Status: early. Local and Google Drive backends work. 106 tests green.
+> Status: early. Local filesystem backend only. 79 tests green.
 > All four skills written. PyPI publish pending — install from git for now.
 
 ## The idea
@@ -22,8 +22,7 @@ layer LLMs forget when left to free-form file writing.
 - **An MCP server** (`llm-wiki-mcp`) exposing four deterministic tools:
   `wiki_read`, `wiki_write_page`, `wiki_log_append`, `wiki_inventory`.
   Atomic writes, etag-based conflict detection, append-only log
-  integrity, path containment. Two storage backends: local filesystem
-  and Google Drive.
+  integrity, path containment. Local filesystem backend.
 - **Four Claude Code skills** (`wiki-init`, `wiki-ingest`, `wiki-query`,
   `wiki-lint`) that drive the server through Karpathy's three
   operations plus a one-shot scaffolder.
@@ -37,11 +36,7 @@ plugin.
 Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Core (local filesystem backend only)
 uv tool install git+https://github.com/flsteven87/llm-wiki-mcp
-
-# With Google Drive backend
-uv tool install "llm-wiki-mcp[gdrive] @ git+https://github.com/flsteven87/llm-wiki-mcp"
 ```
 
 This installs the `llm-wiki-mcp` CLI (the MCP server). The skills ship
@@ -62,7 +57,7 @@ macOS:
   "mcpServers": {
     "llm-wiki": {
       "command": "uvx",
-      "args": ["llm-wiki-mcp", "--wiki-root", "/absolute/path/to/wiki-root"]
+      "args": ["llm-wiki-mcp", "--wiki-root", "/absolute/path/to/wiki"]
     }
   }
 }
@@ -75,26 +70,6 @@ or `~/.claude/mcp_servers.json` globally.
 
 Restart the client. The four `wiki_*` tools should appear in the
 session.
-
-### Google Drive backend
-
-Point the server at a Drive folder instead of a local path. You need a
-GCP service account with Drive API access, and a folder in your Drive
-shared with the service account email.
-
-```json
-"llm-wiki": {
-  "command": "uvx",
-  "args": [
-    "llm-wiki-mcp",
-    "--gdrive-root-folder", "<folder-id>",
-    "--gdrive-credentials", "/absolute/path/to/sa-credentials.json"
-  ]
-}
-```
-
-The folder must already contain `wiki/pages/`. The server does not
-auto-create structure — it surfaces setup mistakes loudly instead.
 
 ## First run
 
@@ -118,10 +93,10 @@ That's Karpathy's ingest loop, running on atomic writes.
 | ------------------ | --------------------------------------------------------------------- |
 | `wiki_read`        | Read a page. Returns body, parsed frontmatter, etag.                  |
 | `wiki_write_page`  | Create or update a page. Etag CAS for conflict-free concurrent writes.|
-| `wiki_log_append`  | Append an entry to `wiki/log.md`. Karpathy format, atomic.            |
+| `wiki_log_append`  | Append an entry to `log.md`. Karpathy format, atomic.                 |
 | `wiki_inventory`   | Snapshot pages + log + optional mention scan for backlink audit.      |
 
-The server does *not* expose tools for `wiki/index.md` or `raw/`. Index
+The server does *not* expose tools for `index.md` or `raw/`. Index
 is LLM-owned content — use the host's standard `Read` / `Write`. `raw/`
 is immutable from the server's perspective.
 
@@ -164,7 +139,7 @@ getting wrong. The schema is the interesting layer you keep evolving.
 ```bash
 git clone https://github.com/flsteven87/llm-wiki-mcp
 cd llm-wiki-mcp
-uv sync --all-extras
+uv sync --extra dev
 uv run pytest
 uv run ruff check .
 ```

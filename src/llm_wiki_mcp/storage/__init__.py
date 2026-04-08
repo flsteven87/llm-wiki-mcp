@@ -1,8 +1,10 @@
 """Storage package — WikiStorage Protocol + PageRead return type.
 
 The Protocol defines the contract that any storage backend must satisfy
-in order to back the 4 MCP tools. LocalFilesystemStorage is the first
-implementor; GoogleDriveStorage will follow in Phase 2B.
+in order to back the 4 MCP tools. LocalFilesystemStorage is the only
+implementor today; the Protocol exists so tools import by interface,
+not by concrete class, and so future backends can drop in without
+touching tool code.
 
 Design notes:
 
@@ -12,8 +14,8 @@ Design notes:
 - read_page returns PageRead so callers never have to stat() files to
   get mtime. Inventory needs mtime for its snapshot; read_page is the
   single authoritative source.
-- etag is an opaque string. Local uses sha256-prefix + mtime_ns; GDrive
-  will use revisionId. Callers treat it as an opaque CAS token.
+- etag is an opaque string. Local uses sha256-prefix + mtime_ns.
+  Callers treat it as an opaque CAS token.
 - write_raw_file is part of the Protocol even though every backend is
   expected to refuse it — its presence in the interface makes "raw is
   immutable" a first-class contract rather than a Local quirk.

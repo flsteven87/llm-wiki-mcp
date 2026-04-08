@@ -15,7 +15,6 @@ import pytest
 from fastmcp import Client
 
 from llm_wiki_mcp.server import build_server
-from tests._fakes.drive import FakeDrive
 
 
 @pytest.fixture
@@ -76,25 +75,6 @@ async def test_round_trip_write_read_inventory(server):
         assert "pg" in str(inv)
 
 
-def test_build_server_uses_local_when_wiki_root_given(tmp_path):
+def test_build_server_constructs_local_backend(tmp_path):
     server = build_server(wiki_root=tmp_path)
     assert server is not None
-
-
-def test_build_server_uses_gdrive_when_gdrive_args_given():
-    drive = FakeDrive()
-    wiki = drive._seed_file(name="wiki", parents=["rootABC"], content=b"")
-    drive._seed_file(name="pages", parents=[wiki.id], content=b"")
-
-    server = build_server(gdrive_service=drive, gdrive_root_folder_id="rootABC")
-    assert server is not None
-
-
-def test_build_server_rejects_both_backends(tmp_path):
-    with pytest.raises(ValueError, match="exactly one"):
-        build_server(wiki_root=tmp_path, gdrive_root_folder_id="r")
-
-
-def test_build_server_rejects_neither_backend():
-    with pytest.raises(ValueError, match="exactly one"):
-        build_server()

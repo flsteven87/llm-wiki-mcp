@@ -15,8 +15,8 @@ from llm_wiki_mcp.tools.read import wiki_read
 def storage_with_page(tmp_path: Path) -> LocalFilesystemStorage:
     root = tmp_path / "wiki-root"
     root.mkdir()
-    (root / "wiki" / "pages").mkdir(parents=True)
-    (root / "wiki" / "pages" / "hello.md").write_text(
+    (root / "pages").mkdir()
+    (root / "pages" / "hello.md").write_text(
         "---\ntitle: Hello\ntags: [greet]\n---\nBody with [[other-page]] link.\n"
     )
     return LocalFilesystemStorage(wiki_root=root)

@@ -1,6 +1,6 @@
 ---
 name: wiki-query
-description: Answer a question against an existing Karpathy-style LLM wiki by reading relevant pages and synthesizing a cited answer. Valuable answers — cross-page comparisons, novel analyses, newly-discovered connections — are filed back into the wiki as new synthesis pages so they do not disappear into chat history. Use whenever the user asks a substantive question about the wiki's topic, requests a comparison or analysis across pages, or says things like "what does the wiki say about X", "compare X and Y", "summarize what we know about X", "according to the wiki", "does the wiki cover X", or wants an answer filed back as a new wiki page. Reads wiki/CLAUDE.md for the active schema and drives all wiki access through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_write_page, wiki_log_append). Do NOT use when the user wants a general-knowledge answer that has nothing to do with the wiki — answer from your own knowledge. Do NOT use when the user is adding a source (use wiki-ingest) or asking for a health check (use wiki-lint). Do NOT use when no wiki exists yet — run wiki-init first.
+description: Answer a question against an existing Karpathy-style LLM wiki by reading relevant pages and synthesizing a cited answer. Valuable answers — cross-page comparisons, novel analyses, newly-discovered connections — are filed back into the wiki as new synthesis pages so they do not disappear into chat history. Use whenever the user asks a substantive question about the wiki's topic, requests a comparison or analysis across pages, or says things like "what does the wiki say about X", "compare X and Y", "summarize what we know about X", "according to the wiki", "does the wiki cover X", or wants an answer filed back as a new wiki page. Reads CLAUDE.md for the active schema and drives all wiki access through the llm-wiki-mcp tools (wiki_inventory, wiki_read, wiki_write_page, wiki_log_append). Do NOT use when the user wants a general-knowledge answer that has nothing to do with the wiki — answer from your own knowledge. Do NOT use when the user is adding a source (use wiki-ingest) or asking for a health check (use wiki-lint). Do NOT use when no wiki exists yet — run wiki-init first.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -34,7 +34,7 @@ new connections earn a page.
 
 ## Pre-flight
 
-Read `wiki/CLAUDE.md`. This is the authoritative schema — page
+Read `CLAUDE.md`. This is the authoritative schema — page
 categories, frontmatter fields, link conventions, and operation
 vocabulary. The user may have evolved it since `wiki-init`. Honor
 the current state, not the defaults.
@@ -47,7 +47,7 @@ the current state, not the defaults.
 
 No `scan_for` argument — this is a cheap call that returns every
 page's slug, frontmatter, body length, and computed in/out links.
-Combine it with a host `Read` of `wiki/index.md` to pick candidate
+Combine it with a host `Read` of `index.md` to pick candidate
 slugs. Prefer pages whose title, `tags`, or category directly match
 the question. When in doubt, widen the candidate set — reading is
 cheap.
@@ -64,7 +64,7 @@ is too broad and you should narrow it with the user first.
 ### 3. Synthesize with citations
 
 Write the answer in the primary language declared in
-`wiki/CLAUDE.md`. Cite every non-trivial claim with `[[slug]]`
+`CLAUDE.md`. Cite every non-trivial claim with `[[slug]]`
 pointing at the page the claim came from. **Only cite slugs that
 appeared in the `pages` list returned by step 1** — this is the
 deterministic guarantee that your citations are not hallucinations.
@@ -101,7 +101,7 @@ When filing:
    `hua-tong-vs-zhen-ding-seasonality`, not
    `hua-tong-wins-on-seasonality`). Lowercase, dashes, at least two
    characters.
-2. Build `body` to match the schema in `wiki/CLAUDE.md`. The typical
+2. Build `body` to match the schema in `CLAUDE.md`. The typical
    category is `synthesis`. Include frontmatter fields the schema
    requires, the question as a heading, the cited answer, and a
    "Sources" section listing every `[[slug]]` you cited.
@@ -109,11 +109,11 @@ When filing:
    asserts the page does not exist. On conflict, pick a different
    slug.
 4. Add a one-line entry under the correct category in
-   `wiki/index.md` using host `Read`/`Write` (the MCP tools do not
+   `index.md` using host `Read`/`Write` (the MCP tools do not
    touch the index).
 5. `wiki_log_append(operation="query", title=<question>,
    extra_lines=[...])`. Use `operation="query"` unless
-   `wiki/CLAUDE.md` has defined different vocabulary.
+   `CLAUDE.md` has defined different vocabulary.
 
 When not filing, skip straight to reporting.
 
@@ -122,11 +122,11 @@ When not filing, skip straight to reporting.
 | Step                  | Tool                                     |
 | --------------------- | ---------------------------------------- |
 | 1. Scope              | `wiki_inventory()`                       |
-| 1. Scope (index)      | host `Read` on `wiki/index.md`           |
+| 1. Scope (index)      | host `Read` on `index.md`           |
 | 2. Read candidates    | `wiki_read(slug=...)`                    |
 | 3. Synthesize         | (conversation; no tool call)             |
 | 4. File (page)        | `wiki_write_page(..., etag=None)`        |
-| 4. File (index)       | host `Read` / `Write` on `wiki/index.md` |
+| 4. File (index)       | host `Read` / `Write` on `index.md` |
 | 4. File (log)         | `wiki_log_append(operation="query", ...)`|
 
 The llm-wiki-mcp server deliberately owns only page CRUD, inventory,
