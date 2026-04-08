@@ -3,7 +3,7 @@
 An MCP server + Claude Code skills that ship Karpathy's LLM Wiki workflow
 as deterministic tools any MCP client can call.
 
-> Status: early. Local filesystem backend only. 79 tests green.
+> Status: early. Local filesystem backend only. 90 tests green.
 > All four skills written. PyPI publish pending — install from git for now.
 
 ## The idea
@@ -119,6 +119,44 @@ is immutable from the server's perspective.
 All four map directly to Karpathy's gist. The server stays
 schema-agnostic — each skill reads `wiki/CLAUDE.md` for the active
 schema on every run.
+
+## Embedding as a library
+
+If you want to wrap `llm-wiki-mcp` with your own storage backend
+(SQLite, Notion, a hosted service, a test fake), the package exposes
+a small public API:
+
+```python
+from llm_wiki_mcp import WikiStorage, PageRead
+from llm_wiki_mcp.server import create_server
+
+class MyStorage:  # must satisfy the WikiStorage Protocol
+    async def read_page(self, slug: str) -> PageRead: ...
+    async def write_page(self, slug, body, expected_etag=None) -> str: ...
+    async def list_pages(self) -> list[str]: ...
+    async def append_log(self, entry) -> None: ...
+    async def read_log(self) -> str: ...
+    async def write_raw_file(self, name, data) -> None: ...  # usually raises
+
+server = create_server(storage=MyStorage())
+server.run()
+```
+
+`create_server` is the composition root. It wires all four MCP tools
+against whatever storage you pass in. The default CLI entry
+(`llm-wiki-mcp --wiki-root <path>`) is a thin wrapper that constructs
+`LocalFilesystemStorage` and calls `create_server` for you.
+
+Typed domain errors (`WikiConflictError`, `WikiNotFoundError`,
+`WikiPermissionError`, `WikiPathError`, `WikiSchemaViolationError`)
+are importable from the package root for catching at your own
+boundary.
+
+Bundled skills (`wiki-init`, `wiki-ingest`, `wiki-query`, `wiki-lint`)
+ship as package data under `llm_wiki_mcp/skills/`. You can read them
+programmatically via `importlib.resources.files("llm_wiki_mcp")
+.joinpath("skills/wiki-ingest/SKILL.md")` if you want to wire them
+into a non-Claude-Code agent.
 
 ## Design note
 
