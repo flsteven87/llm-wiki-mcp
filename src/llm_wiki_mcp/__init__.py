@@ -19,7 +19,7 @@ Public API (stable across patch / minor versions):
   re-raises as a FastMCP `ToolError` so the client LLM sees a
   structured, recoverable message.
 
-Composition root (`llm_wiki_mcp.server.create_server`) is exported from
+Composition root (`llm_wiki_mcp.server.build_server`) is exported from
 its own module rather than the package root because it's the one piece
 that expects a fully-constructed backend and wires a FastMCP server —
 it's better discovered than implicitly imported.

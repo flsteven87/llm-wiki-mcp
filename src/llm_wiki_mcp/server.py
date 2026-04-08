@@ -1,5 +1,10 @@
 """FastMCP server entry for llm-wiki-mcp.
 
+Public surface:
+- `build_server(*, storage: WikiStorage) -> FastMCP` — composition root.
+- `main()` — CLI entry; constructs `LocalFilesystemStorage` from
+  `--wiki-root` and hands it to `build_server`.
+
 Wires the 4 tools into a FastMCP server, sets explicit tool annotations
 (MCP spec 2025-03-26+), and exposes a `main()` CLI for stdio transport.
 
@@ -41,18 +46,20 @@ from llm_wiki_mcp.tools.read import wiki_read as _wiki_read
 from llm_wiki_mcp.tools.write_page import wiki_write_page as _wiki_write_page
 
 
-def create_server(*, storage: WikiStorage) -> FastMCP:
+def build_server(*, storage: WikiStorage) -> FastMCP:
     """Construct a FastMCP server bound to any WikiStorage backend.
 
-    This is the composition-root entry point. Pass in a fully-constructed
-    storage implementation (LocalFilesystemStorage, a test fake, a
-    third-party SQLite/Notion/GDrive adapter — anything satisfying the
-    `WikiStorage` Protocol) and get back a FastMCP server with the four
-    wiki tools wired in.
+    This is the composition root. Pass a fully-constructed storage
+    implementation (LocalFilesystemStorage, a test fake, a third-party
+    SQLite/Notion/GDrive adapter — anything satisfying the `WikiStorage`
+    Protocol) and get back a FastMCP server with the four wiki tools
+    wired in.
 
-    For the common case of "give me a server for this local path",
-    `build_server(wiki_root=...)` is a thin wrapper that constructs
-    `LocalFilesystemStorage` for you.
+    For the common "I just want a local-filesystem server" case, the CLI
+    `main()` does the construction itself:
+
+        storage = LocalFilesystemStorage(wiki_root=path)
+        server = build_server(storage=storage)
     """
     mcp = FastMCP(
         "llm-wiki-mcp",
@@ -260,16 +267,6 @@ def create_server(*, storage: WikiStorage) -> FastMCP:
     return mcp
 
 
-def build_server(*, wiki_root: Path) -> FastMCP:
-    """Construct a FastMCP server bound to a local filesystem wiki root.
-
-    Thin convenience wrapper over `create_server` for the common case —
-    external consumers who want to plug their own storage backend should
-    call `create_server(storage=...)` directly.
-    """
-    return create_server(storage=LocalFilesystemStorage(wiki_root=wiki_root))
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(prog="llm-wiki-mcp")
     parser.add_argument(
@@ -280,7 +277,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    server = build_server(wiki_root=args.wiki_root)
+    storage = LocalFilesystemStorage(wiki_root=args.wiki_root)
+    server = build_server(storage=storage)
     # show_banner=False suppresses FastMCP's startup banner. The banner
     # goes to stderr (never stdout, so it cannot corrupt JSON-RPC) but
     # it adds noise to clients that tail the server's stderr, and for a

@@ -17,9 +17,9 @@ Three categories of public API today:
 
 3. **`__version__`** — resolved from installed package metadata.
 
-The server entry (`create_server`, `build_server`) is NOT part of the
-package-root API today — it lives at `llm_wiki_mcp.server` and is
-covered by the server smoke tests.
+The server entry (`build_server`) is NOT part of the package-root API
+today — it lives at `llm_wiki_mcp.server` and is covered by the server
+smoke tests.
 """
 
 from __future__ import annotations

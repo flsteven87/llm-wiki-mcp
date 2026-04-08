@@ -20,9 +20,10 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
   — closed 3-op taxonomy, 6 page categories, log format locked.
 - **Library embedding surface**: public `WikiStorage` Protocol,
-  `PageRead` NamedTuple, and six typed domain errors exported from
-  the package root. `create_server(*, storage: WikiStorage)` is the
-  composition root for external consumers who want to plug a
+  `PageRead` NamedTuple, `LogEntry` model, and six typed domain
+  errors exported from the package root.
+  `build_server(*, storage: WikiStorage)` at `llm_wiki_mcp.server`
+  is the composition root for external consumers who want to plug a
   different backend.
 - **PEP 561 `py.typed` marker** — downstream mypy/pyright users get
   full type information for the public API.
