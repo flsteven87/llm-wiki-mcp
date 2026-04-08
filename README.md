@@ -209,6 +209,28 @@ uv run ruff check .
 
 Plans live in `docs/plans/`. Session state in `MEMORY.md`.
 
+## Troubleshooting
+
+**`llm-wiki-mcp: command not found`** — `uv tool install` places the
+binary under `~/.local/bin` (Linux/macOS) or `%USERPROFILE%\.local\bin`
+(Windows). Add that to your `PATH`, or use `uvx llm-wiki-mcp ...` to
+invoke it without installing a persistent shim.
+
+**`wiki_*` tools don't appear in the MCP client after wiring** — you
+must restart the MCP client (Claude Desktop / Claude Code / Cursor)
+after editing its config. The client only reads `mcpServers` at
+startup.
+
+**`WikiPathError: path not contained in wiki root`** — the server
+refuses writes outside `--wiki-root`. Double-check the path you
+passed is absolute and points at the wiki folder itself, not its
+parent. `/absolute/path/to/wiki` is correct; `/absolute/path/to` is
+not.
+
+**Skills not loading in Claude Code** — check the plugin is installed
+with `claude plugin list`. If missing, rerun the install commands in
+the "Install the Claude Code skills" section above.
+
 ## License
 
 Apache 2.0. See `LICENSE`.
