@@ -61,9 +61,6 @@ packages = ["src/llm_wiki_mcp"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
-    "MEMORY.md",
-    "PLAN.md",
-    "docs/",
     ".claude/",
     ".claude-plugin/",
     ".venv/",

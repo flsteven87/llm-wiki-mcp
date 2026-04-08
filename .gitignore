@@ -43,3 +43,7 @@ Thumbs.db
 .env.local
 credentials.json
 *.token
+
+# Session-local context (not for public repo)
+MEMORY.md
+PLAN.md
