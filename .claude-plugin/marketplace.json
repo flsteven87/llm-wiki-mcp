@@ -14,10 +14,10 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/wiki-init",
-        "./skills/wiki-ingest",
-        "./skills/wiki-query",
-        "./skills/wiki-lint"
+        "./src/llm_wiki_mcp/skills/wiki-init",
+        "./src/llm_wiki_mcp/skills/wiki-ingest",
+        "./src/llm_wiki_mcp/skills/wiki-query",
+        "./src/llm_wiki_mcp/skills/wiki-lint"
       ]
     }
   ]
