@@ -233,4 +233,4 @@ the "Install the Claude Code skills" section above.
 
 ## License
 
-Apache 2.0. See `LICENSE`.
+MIT. See `LICENSE`.
