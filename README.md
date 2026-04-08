@@ -36,11 +36,36 @@ plugin.
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv tool install git+https://github.com/flsteven87/llm-wiki-mcp
+uv tool install llm-wiki-mcp
+```
+
+Or run it ad-hoc without installing a persistent shim:
+
+```bash
+uvx llm-wiki-mcp --wiki-root /absolute/path/to/wiki
 ```
 
 This installs the `llm-wiki-mcp` CLI (the MCP server). The skills ship
-as a Claude Code plugin in the same repo — see the wiring step below.
+as a Claude Code plugin in the same repo — see "Install the Claude Code
+skills" below.
+
+## Install the Claude Code skills (optional)
+
+If you use Claude Code, the four skills (`wiki-init`, `wiki-ingest`,
+`wiki-query`, `wiki-lint`) ship as a plugin in the same repo. They
+drive the MCP server through Karpathy's workflow — the LLM reads
+`SKILL.md` at the start of each operation instead of improvising.
+
+```bash
+claude plugin marketplace add https://github.com/flsteven87/llm-wiki-mcp
+claude plugin install llm-wiki-skills@llm-wiki-mcp
+```
+
+Other MCP clients (Claude Desktop, Cursor) get the four MCP tools but
+not the skills — the LLM derives the workflow from the tool descriptions
+alone, which works but is less guided. You can still load the skill
+bodies via `importlib.resources` if you're embedding the server as a
+library (see "Embedding as a library" below).
 
 ## Wire it into your MCP client
 
