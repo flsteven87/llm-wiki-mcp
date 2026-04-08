@@ -3,8 +3,8 @@
 An MCP server + Claude Code skills that ship Karpathy's LLM Wiki workflow
 as deterministic tools any MCP client can call.
 
-> Status: early. Local filesystem backend only. 90 tests green.
-> All four skills written. PyPI publish pending — install from git for now.
+> Status: alpha (v0.1.0). Local filesystem backend only. 100+ tests green.
+> All four skills written. Published on PyPI.
 
 ## The idea
 
@@ -33,7 +33,7 @@ plugin.
 
 ## Install
 
-Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv tool install git+https://github.com/flsteven87/llm-wiki-mcp

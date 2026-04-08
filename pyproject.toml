@@ -1,6 +1,6 @@
 [project]
 name = "llm-wiki-mcp"
-version = "0.0.0"
+version = "0.1.0"
 description = "An MCP server for Karpathy-style LLM wikis — persistent, compounding markdown knowledge bases."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["mcp", "llm", "wiki", "knowledge-base", "karpathy", "obsidian", "markdown"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
