@@ -20,6 +20,9 @@ that expects a fully-constructed backend and wires a FastMCP server —
 it's better discovered than implicitly imported.
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
 from llm_wiki_mcp.errors import (
     WikiConflictError,
     WikiError,
@@ -30,7 +33,10 @@ from llm_wiki_mcp.errors import (
 )
 from llm_wiki_mcp.storage import PageRead, WikiStorage
 
-__version__ = "0.0.0"
+try:
+    __version__ = _pkg_version("llm-wiki-mcp")
+except PackageNotFoundError:  # pragma: no cover — only hit if package not installed
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "PageRead",
