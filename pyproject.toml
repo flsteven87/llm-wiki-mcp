@@ -43,7 +43,9 @@ llm-wiki-mcp = "llm_wiki_mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/flsteven87/llm-wiki-mcp"
+Repository = "https://github.com/flsteven87/llm-wiki-mcp"
 Issues = "https://github.com/flsteven87/llm-wiki-mcp/issues"
+Changelog = "https://github.com/flsteven87/llm-wiki-mcp/blob/master/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]
