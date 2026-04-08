@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "An MCP server for Karpathy-style LLM wikis — persistent, compounding markdown knowledge bases."
 readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 authors = [
     { name = "llm-wiki-mcp contributors" },
 ]
@@ -13,6 +13,8 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
 ]
@@ -46,7 +48,7 @@ build-backend = "hatchling.build"
 packages = ["src/llm_wiki_mcp"]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 src = ["src", "tests"]
 
