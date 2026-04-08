@@ -33,10 +33,6 @@ from llm_wiki_mcp.log_format import LogEntry, serialize_log_entry
 from llm_wiki_mcp.slug import resolve_under_root, validate_slug
 from llm_wiki_mcp.storage import PageRead
 
-_DEFAULT_PAGE_DIR = "pages"
-_DEFAULT_LOG_FILE = "log.md"
-_DEFAULT_RAW_DIR = "raw"
-
 
 def _compute_etag(body: bytes, mtime_ns: int) -> str:
     """Etag = first 16 hex chars of sha256(body) || `-` || mtime_ns.
@@ -54,15 +50,12 @@ class LocalFilesystemStorage:
         self,
         *,
         wiki_root: Path | str,
-        page_dir: str = _DEFAULT_PAGE_DIR,
-        log_file: str = _DEFAULT_LOG_FILE,
-        raw_dir: str = _DEFAULT_RAW_DIR,
+        page_dir: str = "pages",
+        log_file: str = "log.md",
     ) -> None:
         self.wiki_root = Path(wiki_root).resolve()
         self.page_dir = page_dir
         self.log_file = log_file
-        self.raw_dir = raw_dir
-        # Eagerly ensure page_dir exists; log file may be created lazily.
         (self.wiki_root / self.page_dir).mkdir(parents=True, exist_ok=True)
 
     # ───── Page operations ─────────────────────────────────────────
@@ -169,7 +162,7 @@ class LocalFilesystemStorage:
         """Always raises. raw/ is immutable per Karpathy."""
         raise WikiPermissionError(
             "writes to raw/ are not allowed; raw sources are immutable",
-            target=f"{self.raw_dir}/{name}",
+            target=f"raw/{name}",
         )
 
     async def list_pages(self) -> list[str]:

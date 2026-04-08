@@ -10,7 +10,7 @@ Design notes:
 
 - Only methods actually called by the tools appear here. No getters for
   wiki_root / page_dir — those are implementation detail of Local and
-  must NOT leak into tool code (this was the inventory layer-leak bug).
+  must NOT leak into tool code.
 - read_page returns PageRead so callers never have to stat() files to
   get mtime. Inventory needs mtime for its snapshot; read_page is the
   single authoritative source.

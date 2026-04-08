@@ -13,7 +13,7 @@ Behavioral invariants under test:
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -29,19 +29,9 @@ from llm_wiki_mcp.storage.local import LocalFilesystemStorage
 
 @pytest.fixture
 def wiki(tmp_path: Path) -> Path:
-    """Seed a flattened wiki folder — --wiki-root points here directly.
-
-    `raw/` lives as a sibling of the wiki folder (project-level convention),
-    NOT inside it. MCP only manages the wiki folder itself.
-    """
-    project_root = tmp_path / "project"
-    project_root.mkdir()
-    (project_root / "raw").mkdir()
-    wiki_root = project_root / "wiki"
-    wiki_root.mkdir()
-    (wiki_root / "log.md").write_text("# Log\n")
-    (wiki_root / "index.md").write_text("# Index\n")
-    return wiki_root
+    root = tmp_path / "wiki"
+    root.mkdir()
+    return root
 
 
 @pytest.fixture
@@ -63,7 +53,6 @@ async def test_read_page_returns_mtime(storage: LocalFilesystemStorage):
     get mtime (layer leak). The Protocol contract promises mtime comes
     from read_page itself.
     """
-    from datetime import datetime
 
     await storage.write_page("pg", "v1")
     page = await storage.read_page("pg")
@@ -102,13 +91,8 @@ async def test_read_missing_page_raises(storage: LocalFilesystemStorage):
         await storage.read_page("nope")
 
 
-async def test_raw_write_rejected(wiki: Path):
-    """write_raw_file always raises regardless of configured raw_dir.
-
-    Karpathy: "Raw sources... are immutable — the LLM reads from them but
-    never modifies them."
-    """
-    storage = LocalFilesystemStorage(wiki_root=wiki)
+async def test_raw_write_rejected(storage: LocalFilesystemStorage):
+    """write_raw_file always raises — raw/ is immutable per Karpathy."""
     with pytest.raises(WikiPermissionError):
         await storage.write_raw_file("source.pdf", b"...")
 
