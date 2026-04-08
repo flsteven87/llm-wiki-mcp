@@ -4,7 +4,7 @@ Persistent markdown wiki for your AI agent, built on [Karpathy's LLM wiki gist](
 
 The server handles the boring layer LLMs keep getting wrong: atomic writes, etag conflict checks, append-only log integrity, path containment. The skills give the agent a workflow to follow. The wiki schema lives in your own `wiki/CLAUDE.md` and grows with your domain. There is no Layer 3 schema validation in the server.
 
-> Status: alpha (v0.1.0). Local backend only. MIT licensed.
+> Status: alpha (v0.1.1). Local backend only. MIT licensed.
 
 ## Quick start
 
@@ -148,3 +148,6 @@ uv run pyright src/llm_wiki_mcp
 ## License
 
 MIT. See [LICENSE](https://github.com/flsteven87/llm-wiki-mcp/blob/master/LICENSE).
+
+<!-- mcp-name: io.github.flsteven87/llm-wiki-mcp -->
+

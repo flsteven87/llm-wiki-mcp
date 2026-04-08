@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.flsteven87/llm-wiki-mcp",
+  "description": "MCP server for Karpathy-style LLM wikis: persistent markdown your agent grows over time.",
+  "repository": {
+    "url": "https://github.com/flsteven87/llm-wiki-mcp",
+    "source": "github"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "llm-wiki-mcp",
+      "version": "0.1.1",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--wiki-root",
+          "format": "filepath",
+          "isRequired": true,
+          "description": "Absolute path to the wiki root directory. The server reads pages from <wiki-root>/pages/ and appends to <wiki-root>/log.md."
+        }
+      ]
+    }
+  ]
+}

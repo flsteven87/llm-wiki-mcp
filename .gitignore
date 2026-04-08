@@ -44,6 +44,10 @@ Thumbs.db
 credentials.json
 *.token
 
+# mcp-publisher auth credentials (written by `mcp-publisher login`)
+.mcpregistry_github_token
+.mcpregistry_registry_token
+
 # Session-local context (not for public repo)
 MEMORY.md
 PLAN.md

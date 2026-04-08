@@ -4,6 +4,15 @@ All notable changes to `llm-wiki-mcp` are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-04-08
+
+### Added
+
+- **MCP Registry ownership marker** in `README.md` — adds the hidden
+  `mcp-name: io.github.flsteven87/llm-wiki-mcp` comment so the
+  registry's PyPI ownership proof passes. No functional changes; this
+  is the forward-fix release that unblocks MCP Registry submission.
+
 ## [0.1.0] — 2026-04-08
 
 ### Added — initial public release
@@ -52,4 +61,5 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - Obsidian-style `[[slug]]` links only; Markdown `[]()` detection
   deferred until a first non-Obsidian user asks.
 
+[0.1.1]: https://github.com/flsteven87/llm-wiki-mcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/flsteven87/llm-wiki-mcp/releases/tag/v0.1.0
