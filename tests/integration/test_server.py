@@ -78,3 +78,40 @@ async def test_round_trip_write_read_inventory(server):
 def test_build_server_constructs_local_backend(tmp_path):
     server = build_server(wiki_root=tmp_path)
     assert server is not None
+
+
+async def test_create_server_accepts_injected_storage(tmp_path: Path):
+    """The new composition-root DI boundary: external consumers pass
+    their own WikiStorage impl (SQLite / Notion / GDrive v2 / test fake)
+    and get a fully-wired FastMCP server back without touching tool code.
+    """
+    from llm_wiki_mcp.server import create_server
+    from llm_wiki_mcp.storage.local import LocalFilesystemStorage
+
+    storage = LocalFilesystemStorage(wiki_root=tmp_path)
+    server = create_server(storage=storage)
+
+    async with Client(server) as client:
+        tools = await client.list_tools()
+        names = {t.name for t in tools}
+        assert names == {
+            "wiki_read",
+            "wiki_write_page",
+            "wiki_log_append",
+            "wiki_inventory",
+        }
+
+
+async def test_build_server_is_thin_wrapper_over_create_server(tmp_path: Path):
+    """build_server must keep working as the "give me a server for this
+    filesystem path" convenience — but internally go through create_server
+    so both paths exercise the same code.
+    """
+    server = build_server(wiki_root=tmp_path)
+    async with Client(server) as client:
+        await client.call_tool(
+            "wiki_write_page",
+            {"slug": "pg", "body": "---\ntitle: P\n---\nhello"},
+        )
+        inv = await client.call_tool("wiki_inventory", {})
+        assert "pg" in str(inv)

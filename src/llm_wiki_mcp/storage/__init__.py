@@ -28,6 +28,8 @@ from typing import NamedTuple, Protocol, runtime_checkable
 
 from llm_wiki_mcp.log_format import LogEntry
 
+__all__ = ["PageRead", "WikiStorage"]
+
 
 class PageRead(NamedTuple):
     """Return value of WikiStorage.read_page.

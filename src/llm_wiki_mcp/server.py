@@ -28,10 +28,19 @@ from llm_wiki_mcp.tools.read import wiki_read as _wiki_read
 from llm_wiki_mcp.tools.write_page import wiki_write_page as _wiki_write_page
 
 
-def build_server(*, wiki_root: Path) -> FastMCP:
-    """Construct a FastMCP server bound to a local filesystem wiki root."""
-    storage: WikiStorage = LocalFilesystemStorage(wiki_root=wiki_root)
+def create_server(*, storage: WikiStorage) -> FastMCP:
+    """Construct a FastMCP server bound to any WikiStorage backend.
 
+    This is the composition-root entry point. Pass in a fully-constructed
+    storage implementation (LocalFilesystemStorage, a test fake, a
+    third-party SQLite/Notion/GDrive adapter — anything satisfying the
+    `WikiStorage` Protocol) and get back a FastMCP server with the four
+    wiki tools wired in.
+
+    For the common case of "give me a server for this local path",
+    `build_server(wiki_root=...)` is a thin wrapper that constructs
+    `LocalFilesystemStorage` for you.
+    """
     mcp = FastMCP("llm-wiki-mcp")
 
     @mcp.tool(
@@ -101,6 +110,16 @@ def build_server(*, wiki_root: Path) -> FastMCP:
         return inv.model_dump()
 
     return mcp
+
+
+def build_server(*, wiki_root: Path) -> FastMCP:
+    """Construct a FastMCP server bound to a local filesystem wiki root.
+
+    Thin convenience wrapper over `create_server` for the common case —
+    external consumers who want to plug their own storage backend should
+    call `create_server(storage=...)` directly.
+    """
+    return create_server(storage=LocalFilesystemStorage(wiki_root=wiki_root))
 
 
 def main() -> None:
