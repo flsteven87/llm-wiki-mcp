@@ -133,10 +133,17 @@ class LocalFilesystemStorage:
         return resolve_under_root(self.wiki_root, self.log_file)
 
     async def append_log(self, entry: LogEntry) -> None:
-        """O_APPEND single write. Concurrent-safe under POSIX small writes."""
+        """O_APPEND single write. Concurrent-safe under POSIX small writes.
+
+        The leading `\\n` guarantees visual separation from whatever came
+        before — legacy log files that end with a single `\\n` (no trailing
+        blank line) would otherwise visually merge the new entry into the
+        previous one's last line. Cost: first-ever entry in a brand-new
+        file gets a leading blank line. Acceptable for robustness.
+        """
         path = self._log_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        serialized = serialize_log_entry(entry) + "\n\n"
+        serialized = "\n" + serialize_log_entry(entry) + "\n\n"
         data = serialized.encode("utf-8")
 
         # Single os.write() under O_APPEND is atomic on POSIX for sizes

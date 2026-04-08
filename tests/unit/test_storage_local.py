@@ -109,6 +109,38 @@ async def test_log_append_atomic(storage: LocalFilesystemStorage):
     assert text.index("ingest | A") < text.index("lint | B")
 
 
+async def test_append_log_separates_from_legacy_entry_without_trailing_blank(
+    storage: LocalFilesystemStorage, wiki: Path
+):
+    """Regression: Phase G.2 dogfood found that if a pre-existing log.md
+    ends with a single newline (no trailing blank line) — common for
+    hand-written log files or legacy scaffolds — the next append visually
+    merges with the previous entry because the append only emits a
+    trailing `\\n\\n` and nothing leading.
+
+    Fix: always prepend a newline so the new entry is guaranteed to start
+    on its own line, regardless of what came before. Cost: brand-new log
+    gets one leading blank line. Acceptable for robustness.
+    """
+    log_path = wiki / "log.md"
+    # Legacy content — single trailing newline, no blank line after
+    log_path.write_text(
+        "## [2026-04-07] ingest | legacy source\nExtra line from old scaffold\n",
+        encoding="utf-8",
+    )
+
+    await storage.append_log(
+        LogEntry(timestamp=date(2026, 4, 8), operation="lint", title="new"),
+    )
+
+    text = log_path.read_text(encoding="utf-8")
+    # The new entry must be visually separated from the legacy tail by a
+    # blank line — i.e. there is a \n\n immediately before the new header.
+    assert "\n\n## [2026-04-08] lint | new" in text, (
+        f"Expected blank-line separator before new entry. Got:\n{text!r}"
+    )
+
+
 async def test_concurrent_log_appends_do_not_lose_entries(
     storage: LocalFilesystemStorage,
 ):

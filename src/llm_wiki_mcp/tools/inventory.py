@@ -91,8 +91,16 @@ async def wiki_inventory(
 
 
 def _scan_mentions(bodies: dict[str, str], terms: list[str]) -> list[Mention]:
-    """Word-boundary, case-insensitive plain-text scan over page bodies."""
-    compiled = [(term, re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)) for term in terms]
+    """Case-insensitive substring scan over page bodies.
+
+    Deliberately no `\\b` word boundaries: Python's Unicode regex treats
+    CJK characters as `\\w`, so `\\b載板\\b` would fail to match when 載板
+    is surrounded by other CJK characters (e.g. "與載板設備"). Mention
+    discovery wants partial matches anyway — the whole point is to
+    surface every occurrence of a concept name regardless of its
+    neighbors.
+    """
+    compiled = [(term, re.compile(re.escape(term), re.IGNORECASE)) for term in terms]
     mentions: list[Mention] = []
     for slug, body_text in bodies.items():
         for line_no, line in enumerate(body_text.splitlines(), start=1):

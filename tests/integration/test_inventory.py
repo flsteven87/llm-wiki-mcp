@@ -110,3 +110,59 @@ async def test_inventory_no_scan_returns_empty_mentions(
 ):
     inv = await wiki_inventory(populated)
     assert inv.mentions == []
+
+
+async def test_inventory_scan_for_matches_cjk_term_embedded_in_cjk_prose(
+    tmp_path: Path,
+):
+    """Regression: Phase G.2 dogfood discovered that scan_for under-reports
+    CJK mentions when the term is surrounded by other CJK characters.
+
+    Root cause: `re.compile(rf"\\b{term}\\b", re.IGNORECASE)` uses word
+    boundaries. Python's Unicode regex treats CJK characters as word chars
+    (\\w), so `\\b載板\\b` can only match when 載板 is preceded/followed by
+    non-word chars (punctuation, whitespace, ASCII). Inside continuous CJK
+    prose like "與載板設備" or "與載板。" the boundary doesn't fire and the
+    mention is silently dropped.
+
+    This broke the backlink-audit "killer feature" on zh-tw / zh-cn / ja
+    / ko wikis in practice.
+    """
+    root = tmp_path / "wiki-root"
+    root.mkdir()
+    storage = LocalFilesystemStorage(wiki_root=root)
+
+    await wiki_write_page(
+        storage,
+        slug="zhen-ding",
+        body=(
+            "---\ntitle: 臻鼎-KY\n---\n同時布局 AI 伺服器與載板設備，載板業務是第二條腿。\n"  # noqa: RUF001
+        ),
+    )
+
+    inv = await wiki_inventory(storage, scan_for=["載板"])
+    hits = [m for m in inv.mentions if m.slug == "zhen-ding" and m.term == "載板"]
+    assert len(hits) >= 1, f"Expected 載板 mention on zhen-ding, got: {inv.mentions}"
+
+
+async def test_inventory_scan_for_matches_ascii_term_without_word_boundary(
+    tmp_path: Path,
+):
+    """Complement to the CJK fix: ensure ASCII terms still match when
+    embedded in CJK (which they always were, pre-fix) AND when embedded
+    mid-word (which they weren't, pre-fix — but that's fine for mention
+    discovery; partial matches are the desired semantics here).
+    """
+    root = tmp_path / "wiki-root"
+    root.mkdir()
+    storage = LocalFilesystemStorage(wiki_root=root)
+
+    await wiki_write_page(
+        storage,
+        slug="optical",
+        body="---\ntitle: Optical\n---\n800G 與 1.6T 光模組於 2026 年量產。\n",
+    )
+
+    inv = await wiki_inventory(storage, scan_for=["800G", "1.6T"])
+    terms = {m.term for m in inv.mentions if m.slug == "optical"}
+    assert terms == {"800G", "1.6T"}
