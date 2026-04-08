@@ -4,7 +4,7 @@ An MCP server + Claude Code skills that ship Karpathy's LLM Wiki workflow
 as deterministic tools any MCP client can call.
 
 > Status: early. Local and Google Drive backends work. 106 tests green.
-> PyPI publish pending — install from git for now.
+> All four skills written. PyPI publish pending — install from git for now.
 
 ## The idea
 
@@ -24,10 +24,9 @@ layer LLMs forget when left to free-form file writing.
   Atomic writes, etag-based conflict detection, append-only log
   integrity, path containment. Two storage backends: local filesystem
   and Google Drive.
-- **Five Claude Code skills** (`wiki-init`, `wiki-ingest`, `wiki-query`,
-  `wiki-lint`, `wiki-update`) that drive the server through Karpathy's
-  operations. `wiki-init` and `wiki-ingest` are written; the other three
-  are stubs at the moment.
+- **Four Claude Code skills** (`wiki-init`, `wiki-ingest`, `wiki-query`,
+  `wiki-lint`) that drive the server through Karpathy's three
+  operations plus a one-shot scaffolder.
 
 The MCP server enforces mechanical invariants; the skills give the LLM
 the workflow to follow. Both pieces install as a single Claude Code
@@ -126,20 +125,25 @@ The server does *not* expose tools for `wiki/index.md` or `raw/`. Index
 is LLM-owned content — use the host's standard `Read` / `Write`. `raw/`
 is immutable from the server's perspective.
 
-## The five skills
+## The four skills
 
 - **`wiki-init`** — scaffold a fresh wiki. Creates `raw/`, `wiki/`, a
   starter `wiki/CLAUDE.md` schema doc, seeded `index.md` and `log.md`.
   Does not need the MCP server to run.
-- **`wiki-ingest`** — Karpathy's six-step ingest flow, driven by the
-  MCP tools. Reads `wiki/CLAUDE.md` for the active schema.
-- **`wiki-query`** *(stub)* — search and synthesize answers.
-- **`wiki-lint`** *(stub)* — health-check for contradictions, orphans,
-  stale claims, missing cross-references.
-- **`wiki-update`** *(stub)* — targeted single-page edits.
+- **`wiki-ingest`** — Karpathy's six-step ingest flow. Reads a source,
+  discusses takeaways, writes a summary page, updates the index,
+  updates relevant entity and concept pages, appends a log entry.
+- **`wiki-query`** — answer a question by reading relevant pages and
+  synthesizing a cited answer. Files valuable cross-page analyses
+  back as `synthesis` pages so they compound instead of vanishing
+  into chat history.
+- **`wiki-lint`** — health-check the wiki for contradictions, stale
+  claims, orphans, concepts deserving their own page, missing
+  cross-references, and data gaps. Reports; does not auto-fix.
 
-The three stubs have triggering descriptions but no body yet. They will
-be written in a subsequent pass.
+All four map directly to Karpathy's gist. The server stays
+schema-agnostic — each skill reads `wiki/CLAUDE.md` for the active
+schema on every run.
 
 ## Design note
 

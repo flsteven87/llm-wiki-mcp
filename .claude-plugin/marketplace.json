@@ -10,15 +10,14 @@
   "plugins": [
     {
       "name": "llm-wiki-skills",
-      "description": "Reference Karpathy LLM Wiki workflows: init, ingest, query, lint, update. Pairs with the llm-wiki-mcp MCP server.",
+      "description": "Reference Karpathy LLM Wiki workflows: init, ingest, query, lint. Pairs with the llm-wiki-mcp MCP server.",
       "source": "./",
       "strict": false,
       "skills": [
         "./skills/wiki-init",
         "./skills/wiki-ingest",
         "./skills/wiki-query",
-        "./skills/wiki-lint",
-        "./skills/wiki-update"
+        "./skills/wiki-lint"
       ]
     }
   ]
